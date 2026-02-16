@@ -1,0 +1,72 @@
+sites:
+  property24:
+    name: "Property24"
+    base_url: "https://www.property24.com"
+    start_urls:
+      - "https://www.property24.com/for-sale"
+    
+    selectors:
+      # Listing page selectors
+      listing_links: ".p24_listing a.p24_listingCard::attr(href)"
+      next_page: ".pagination a.next::attr(href)"
+      
+      # Detail page selectors
+      title: "h1.p24_title::text"
+      price: ".p24_price::text"
+      location: ".p24_location::text"
+      bedrooms: ".p24_featureDetails:contains('Bedrooms') .p24_info::text"
+      bathrooms: ".p24_featureDetails:contains('Bathrooms') .p24_info::text"
+      property_type: ".p24_propertyType::text"
+      description: ".p24_description::text"
+      agent_name: ".p24_agentName::text"
+      agent_phone: ".p24_agentPhone::text"
+      listing_id: ".p24_refNumber::text"
+      date_posted: ".p24_datePosted::text"
+    
+    pagination:
+      type: "next_link"  # or "infinite_scroll"
+      max_pages: 50
+    
+    rate_limit:
+      delay: 1.0  # seconds between requests
+      randomize: true
+
+  privateproperty:
+    name: "Private Property"
+    base_url: "https://www.privateproperty.co.za"
+    start_urls:
+      - "https://www.privateproperty.co.za/for-sale"
+    
+    selectors:
+      # Listing page selectors
+      listing_links: ".listing-result a.listing-result-link::attr(href)"
+      next_page: ".pagination .next::attr(href)"
+      
+      # Detail page selectors
+      title: "h1.listing-title::text"
+      price: ".listing-price::text"
+      location: ".listing-location::text"
+      bedrooms: ".icon-bed + span::text"
+      bathrooms: ".icon-bath + span::text"
+      property_type: ".property-type::text"
+      description: ".listing-description::text"
+      agent_name: ".agent-name::text"
+      agent_phone: ".agent-phone::text"
+      listing_id: ".listing-reference::text"
+      date_posted: ".listing-date::text"
+    
+    pagination:
+      type: "next_link"
+      max_pages: 50
+    
+    rate_limit:
+      delay: 1.0
+      randomize: true
+
+# Global settings
+global:
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+  concurrent_requests: 8
+  download_delay: 1
+  retry_times: 3
+  retry_http_codes: [500, 502, 503, 504, 408, 429]

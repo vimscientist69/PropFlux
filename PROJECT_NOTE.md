@@ -240,6 +240,7 @@ The final project must include:
 - Docker containerization
 - proxy support (compliant usage only)
 - cloud deployment (Fly.io / AWS)
+- any real estate website support using AI
 
 ---
 

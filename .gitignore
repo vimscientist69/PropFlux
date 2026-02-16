@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Scrapy
+.scrapy/
+
+# Output files
+output/*.csv
+output/*.json
+output/*.db
+output/*.sqlite
+output/*.sqlite3
+
+# Logs
+logs/*.log
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Playwright
+.playwright/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files (keep structure, ignore data)
+data/
+*.csv
+*.json
+!config/*.json
+!config/*.yaml
