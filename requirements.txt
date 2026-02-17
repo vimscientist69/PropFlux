@@ -10,9 +10,6 @@ python-dateutil>=2.8.2
 # Configuration
 PyYAML>=6.0.1
 
-# Database
-sqlite3  # Built-in, but listed for documentation
-
 # Utilities
 python-dotenv>=1.0.0
 loguru>=0.7.2

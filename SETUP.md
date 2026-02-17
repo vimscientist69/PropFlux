@@ -9,7 +9,7 @@ Run these commands to get started:
 cd /Users/williamferns/dev/personal-projects/multi-site-real-estate-scraper
 
 # Activate virtual environment
-source venv/bin/activate
+source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -36,11 +36,11 @@ python runner.py --site property24 --max-pages 1 --verbose
 
 ## Virtual Environment
 
-A virtual environment has been created at `venv/`. To use it:
+A virtual environment has been created at `.venv/`. To use it:
 
 ```bash
 # Activate
-source venv/bin/activate
+source .venv/bin/activate
 
 # Deactivate when done
 deactivate
@@ -49,14 +49,11 @@ deactivate
 ## Installing Dependencies
 
 ```bash
-# Make sure venv is activated first
-source venv/bin/activate
+# Make sure .venv is activated first
+source .venv/bin/activate
 
 # Install all dependencies
 pip install -r requirements.txt
-
-# Optional: Install Playwright for JS-heavy sites
-playwright install
 ```
 
 ## Project Status

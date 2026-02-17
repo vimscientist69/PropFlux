@@ -26,14 +26,11 @@ A production-ready, scalable web scraping system for extracting structured real 
 cd multi-site-real-estate-scraper
 
 # Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Install Playwright browsers (if needed for JS-heavy sites)
-playwright install
 ```
 
 ### 2. Run the Scraper
