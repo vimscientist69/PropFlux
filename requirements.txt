@@ -1,5 +1,6 @@
 # Core scraping dependencies
 scrapy>=2.11.0
+scrapy-playwright>=0.0.34
 requests>=2.31.0
 playwright>=1.40.0
 

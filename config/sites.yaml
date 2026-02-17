@@ -3,11 +3,12 @@ sites:
     name: "Property24"
     base_url: "https://www.property24.com"
     start_urls:
-      - "https://www.property24.com/for-sale"
+      # Using Cape Town search results as default - change region code (432) as needed
+      - "https://www.property24.com/for-sale/cape-town/western-cape/432"
     
     selectors:
-      # Listing page selectors
-      listing_links: ".p24_listing a.p24_listingCard::attr(href)"
+      # Listing page selectors - updated to actual site structure
+      listing_links: ".js_resultTile.js_resultTileClickable a::attr(href)"
       next_page: ".pagination a.next::attr(href)"
       
       # Detail page selectors

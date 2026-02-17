@@ -43,7 +43,7 @@ class BaseRealEstateSpider(scrapy.Spider):
     
     def _load_config(self) -> Dict[str, Any]:
         """Load sites configuration from YAML."""
-        config_path = Path(__file__).parent.parent / 'config' / 'sites.yaml'
+        config_path = Path(__file__).parent.parent.parent / 'config' / 'sites.yaml'
         
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)

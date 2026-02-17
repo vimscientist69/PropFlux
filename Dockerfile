@@ -25,18 +25,21 @@ RUN ln -s /usr/bin/python3.12 /usr/bin/python
 # Copy requirements first for better layer caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Create virtual environment
+RUN python3 -m venv /app/.venv
 
-# Install Playwright browsers (if needed for JavaScript rendering)
-RUN playwright install chromium && \
+# Activate virtual environment and install dependencies
+RUN . /app/.venv/bin/activate && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    playwright install chromium && \
     playwright install-deps chromium
+
+# Update PATH to use virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy project files
 COPY . .
-
-# Set proper permissions
-RUN chmod +x runner.py
 
 # Default command - can be overridden
 ENTRYPOINT ["python", "runner.py"]
