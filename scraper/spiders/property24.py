@@ -44,6 +44,10 @@ class Property24Spider(BaseRealEstateSpider):
         # Extract listing links
         listing_links = self.parser.parse_listing_links(response)
         
+        # DEV LIMIT: only processing first 3 links
+        listing_links = listing_links[:3]
+        logger.info(f"Dev limit: only processing first {len(listing_links)} links")
+        
         # Follow each listing link
         for link in listing_links:
             yield scrapy.Request(
