@@ -14,8 +14,8 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 ROBOTSTXT_OBEY = True
 
 # Configure maximum concurrent requests
-CONCURRENT_REQUESTS = 8
-CONCURRENT_REQUESTS_PER_DOMAIN = 4
+CONCURRENT_REQUESTS = 1
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
 
 # Configure a delay for requests
 DOWNLOAD_DELAY = 1
@@ -36,18 +36,6 @@ DEFAULT_REQUEST_HEADERS = {
 # SPIDER_MIDDLEWARES = {
 #    'scraper.middlewares.ScraperSpiderMiddleware': 543,
 # }
-
-# Enable Playwright for JavaScript rendering
-DOWNLOAD_HANDLERS = {
-    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
-    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
-}
-
-# Playwright settings
-PLAYWRIGHT_BROWSER_TYPE = "chromium"
-PLAYWRIGHT_LAUNCH_OPTIONS = {
-    "headless": True,
-}
 
 # Enable or disable downloader middlewares
 # DOWNLOADER_MIDDLEWARES = {

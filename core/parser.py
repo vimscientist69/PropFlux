@@ -28,16 +28,35 @@ class Parser:
         Returns:
             List of absolute URLs to individual listings
         """
-        selector = self.selectors.get('listing_links')
-        if not selector:
+        link_selector = self.selectors.get('listing_links')
+        container_selector = self.selectors.get('listing_container')
+        
+        if not link_selector:
             logger.warning("No listing_links selector configured")
             return []
         
-        links = response.css(selector).getall()
-        # Convert to absolute URLs
-        absolute_links = [response.urljoin(link) for link in links]
+        if container_selector:
+            # Extract one link per container for better accuracy
+            containers = response.css(container_selector)
+            links = []
+            for container in containers:
+                link = container.css(link_selector).get()
+                if link:
+                    links.append(link)
+        else:
+            # Fallback to direct selection
+            links = response.css(link_selector).getall()
+            
+        # Convert to absolute URLs and remove duplicates while preserving order
+        absolute_links = []
+        seen = set()
+        for link in links:
+            abs_link = response.urljoin(link)
+            if abs_link not in seen:
+                absolute_links.append(abs_link)
+                seen.add(abs_link)
         
-        logger.info(f"Found {len(absolute_links)} listing links")
+        logger.info(f"Found {len(absolute_links)} unique listing links")
         return absolute_links
     
     def parse_next_page(self, response: Response) -> Optional[str]:

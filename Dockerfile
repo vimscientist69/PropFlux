@@ -31,9 +31,7 @@ RUN python3 -m venv /app/.venv
 # Activate virtual environment and install dependencies
 RUN . /app/.venv/bin/activate && \
     pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    playwright install chromium && \
-    playwright install-deps chromium
+    pip install --no-cache-dir -r requirements.txt
 
 # Update PATH to use virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
