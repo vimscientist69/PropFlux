@@ -59,6 +59,33 @@ class Parser:
         logger.info(f"Found {len(absolute_links)} unique listing links")
         return absolute_links
     
+    def parse_total_pages(self, response: Response) -> int:
+        """
+        Extract total number of pages from pagination.
+        
+        Args:
+            response: Scrapy Response object
+            
+        Returns:
+            Total number of pages (default 1 if not found)
+        """
+        selector = self.selectors.get('total_pages_selector')
+        if not selector:
+            return 1
+        
+        total_text = response.css(selector).get()
+        if total_text:
+            try:
+                # Extract digits from text like "Page 1 of 50" or just "50"
+                import re
+                match = re.search(r'(\d+)', total_text)
+                if match:
+                    return int(match.group(1))
+            except (ValueError, TypeError):
+                logger.warning(f"Could not parse total pages from text: {total_text}")
+        
+        return 1
+
     def parse_next_page(self, response: Response) -> Optional[str]:
         """
         Extract next page URL from pagination.
