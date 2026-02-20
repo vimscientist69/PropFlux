@@ -110,8 +110,14 @@ class BaseRealEstateSpider(scrapy.Spider):
             response: Scrapy Response object
             
         Yields:
-            Requests to listing detail pages and next page
+            Requests to listing detail pages and next page or listing data
         """
+        # Check if this is a direct listing detail page
+        if self.parser.is_detail_page(response):
+            logger.info(f"Direct listing detail page detected: {response.url}")
+            yield self.parse_listing(response)
+            return
+
         self.current_page += 1
         logger.info(f"Parsing page {self.current_page}: {response.url}")
         

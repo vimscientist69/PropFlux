@@ -42,8 +42,11 @@ python runner.py --site property24
 # Scrape Private Property
 python runner.py --site privateproperty
 
-# Use custom URL
-python runner.py --site property24 --url "https://www.property24.com/for-sale/cape-town/western-cape/9999"
+# Use custom URL (search results or single listing)
+python runner.py --site property24 --url "https://www.property24.com/for-sale/cape-town/western-cape/432"
+
+# Scrape a single listing directly
+python runner.py --site property24 --url "https://www.property24.com/for-sale/diep-river/cape-town/western-cape/10195/116918754"
 
 # Limit pages
 python runner.py --site property24 --max-pages 5

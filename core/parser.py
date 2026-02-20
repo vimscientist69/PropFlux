@@ -151,6 +151,34 @@ class Parser:
         
         return data
     
+    def is_detail_page(self, response: Response) -> bool:
+        """
+        Check if the current response is a listing detail page.
+        
+        Logic: Returns True if the 'title' selector matches something,
+        but the 'listing_links' or 'listing_container' selectors do not.
+        
+        Args:
+            response: Scrapy Response object
+            
+        Returns:
+            True if it's a detail page, False otherwise
+        """
+        title_selector = self.selectors.get('title')
+        container_selector = self.selectors.get('listing_container')
+        links_selector = self.selectors.get('listing_links')
+        
+        # Must have a title to be a detail page
+        if not title_selector or not response.css(title_selector).get():
+            return False
+            
+        # Should NOT have listing containers or links (or very few)
+        containers = response.css(container_selector).getall() if container_selector else []
+        links = response.css(links_selector).getall() if links_selector else []
+        
+        # If there are no links or containers, but there is a title, it's a detail page
+        return len(containers) == 0 and len(links) < 5
+    
     def extract_text(self, response: Response, selector: str) -> Optional[str]:
         """
         Helper method to extract and clean text from a selector.
