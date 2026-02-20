@@ -24,6 +24,10 @@ sites:
       agent_phone: ".p24_agentPhone::text"
       listing_id: ".p24_propertyOverviewRow:contains('Listing Number') .p24_info::text"
       date_posted: ".p24_propertyOverviewRow:contains('Listing Date') .p24_info::text"
+      
+      # Hidden selectors for phone retrieval API
+      agent_profile_url: ".p24_agentPhoto a::attr(href)"
+      contact_value: ".js_agentDetails::attr(data-value)"
     
     pagination:
       type: "pattern"

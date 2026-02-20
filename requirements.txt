@@ -16,3 +16,6 @@ loguru>=0.7.2
 # Optional: For advanced features
 # streamlit>=1.29.0  # For future UI
 # schedule>=1.2.0    # For future scheduling
+
+# CAPTCHA solving
+nopecha>=0.3.0
