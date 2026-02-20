@@ -1,12 +1,11 @@
 """
 Service for retrieving protected phone numbers from real estate sites.
 """
-import os
 import requests
-import json
-from typing import Optional, Dict, Any
+from typing import Optional
 from loguru import logger
 from core.captcha_resolver import CaptchaResolver
+from config.settings import settings
 
 class PhoneService:
     """Handles API requests to fetch protected phone numbers."""
@@ -39,9 +38,9 @@ class PhoneService:
         Returns:
             Cleaned phone number or None
         """
-        site_key = os.getenv('PROPERTY_24_RECAPTCHA_SITEKEY')
+        site_key = settings.PROPERTY24_RECAPTCHA_SITEKEY
         if not site_key:
-            logger.error("PROPERTY_24_RECAPTCHA_SITEKEY not found in environment")
+            logger.error("PROPERTY24_RECAPTCHA_SITEKEY not found in settings")
             return None
 
         # Solve CAPTCHA

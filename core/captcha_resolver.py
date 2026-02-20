@@ -4,17 +4,15 @@ reCAPTCHA resolver using NopeCHA service.
 import os
 import nopecha
 from loguru import logger
-from dotenv import load_dotenv
-
-load_dotenv()
+from config.settings import settings
 
 class CaptchaResolver:
     """Handles CAPTCHA solving using NopeCHA."""
     
     def __init__(self):
-        self.api_key = os.getenv('NOPECHA_API_KEY')
+        self.api_key = settings.NOPECHA_API_KEY
         if not self.api_key:
-            logger.error("NOPECHA_API_KEY not found in environment")
+            logger.error("NOPECHA_API_KEY not found in settings")
         nopecha.api_key = self.api_key
 
     def solve_recaptcha(self, site_key: str, url: str) -> str:

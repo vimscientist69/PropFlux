@@ -10,6 +10,7 @@ from loguru import logger
 
 from core.parser import Parser
 from core.normalizer import Normalizer
+from config.settings import settings
 
 
 class BaseRealEstateSpider(scrapy.Spider):
@@ -42,7 +43,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         self.total_pages = None
         
         # Development limits
-        self.dev_limit = 3  # Set to None for no limit
+        self.dev_limit = settings.DEV_LIMIT
         
         logger.info(f"Initialized {self.name} spider for {self.site_key}")
     
