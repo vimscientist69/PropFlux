@@ -10,20 +10,20 @@ sites:
       # Listing page selectors - updated to actual site structure
       listing_container: ".p24_tileContainer"
       listing_links: "a::attr(href)"
-      next_page: ".pagination a.next::attr(href)"
+      # next_page: ".pagination a.next::attr(href)"
       
       # Detail page selectors
-      title: "h1.p24_title::text"
+      title: ".p24_listingCard h1::text"
       price: ".p24_price::text"
-      location: ".p24_location::text"
-      bedrooms: ".p24_featureDetails:contains('Bedrooms') .p24_info::text"
-      bathrooms: ".p24_featureDetails:contains('Bathrooms') .p24_info::text"
-      property_type: ".p24_propertyType::text"
-      description: ".p24_description::text"
-      agent_name: ".p24_agentName::text"
+      location: ".p24_listingCard > *:nth-child(4)::text"
+      bedrooms: ".p24_featureDetails[title='Bedrooms'] span::text"
+      bathrooms: ".p24_featureDetails[title='Bathrooms'] span::text"
+      property_type: ".p24_propertyOverviewRow:contains('Type of Property') .p24_info::text"
+      description: ".p24_expandedText p::text"
+      agent_name: ".p24_agentName a::text"
       agent_phone: ".p24_agentPhone::text"
-      listing_id: ".p24_refNumber::text"
-      date_posted: ".p24_datePosted::text"
+      listing_id: ".p24_propertyOverviewRow:contains('Listing Number') .p24_info::text"
+      date_posted: ".p24_propertyOverviewRow:contains('Listing Date') .p24_info::text"
     
     pagination:
       type: "pattern"
