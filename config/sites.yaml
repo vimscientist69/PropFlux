@@ -4,7 +4,7 @@ sites:
     base_url: "https://www.property24.com"
     start_urls:
       # Using Cape Town search results as default - change region code (432) as needed
-      - "https://www.property24.com/for-sale/cape-town/western-cape/432"
+      # - "https://www.property24.com/for-sale/cape-town/western-cape/432"
     
     selectors:
       # Listing page selectors - updated to actual site structure

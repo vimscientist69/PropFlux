@@ -166,18 +166,18 @@ class Parser:
         """
         title_selector = self.selectors.get('title')
         container_selector = self.selectors.get('listing_container')
-        links_selector = self.selectors.get('listing_links')
         
         # Must have a title to be a detail page
         if not title_selector or not response.css(title_selector).get():
+            logger.info(f"No title selector or no title content found from html")
             return False
             
-        # Should NOT have listing containers or links (or very few)
-        containers = response.css(container_selector).getall() if container_selector else []
-        links = response.css(links_selector).getall() if links_selector else []
-        
-        # If there are no links or containers, but there is a title, it's a detail page
-        return len(containers) == 0 and len(links) < 5
+        # If listing_container is present, it's a search page
+        if container_selector and response.css(container_selector):
+            logger.info(f"Container selector present and it is found in html")
+            return False
+
+        return True
     
     def extract_text(self, response: Response, selector: str) -> Optional[str]:
         """

@@ -10,7 +10,7 @@ class Normalizer:
     """Handles data normalization and cleaning."""
     
     @staticmethod
-    def normalize_price(price_str: Optional[str]) -> Optional[float]:
+    def normalize_price(price_str: Any) -> Optional[float]:
         """
         Convert price string to numeric format.
         
@@ -20,17 +20,20 @@ class Normalizer:
             "1 200 000" -> 1200000.0
         
         Args:
-            price_str: Raw price string
+            price_str: Raw price string or already normalized numeric value
             
         Returns:
             Numeric price or None if parsing fails
         """
-        if not price_str:
+        if price_str is None:
             return None
+            
+        if isinstance(price_str, (int, float)):
+            return float(price_str)
         
         try:
             # Remove currency symbols and common prefixes
-            cleaned = re.sub(r'[R$€£,\s]', '', price_str)
+            cleaned = re.sub(r'[R$€£,\s]', '', str(price_str))
             
             # Handle M (millions) and K (thousands) suffixes
             if 'M' in cleaned.upper():
@@ -46,7 +49,7 @@ class Normalizer:
             price = float(cleaned) * multiplier
             return price
             
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Failed to normalize price '{price_str}': {e}")
             return None
     
@@ -65,7 +68,7 @@ class Normalizer:
             return None
         
         # Remove extra whitespace
-        cleaned = ' '.join(location_str.split())
+        cleaned = ' '.join(str(location_str).split())
         
         # Remove common noise words/characters
         cleaned = cleaned.strip(',').strip()
@@ -73,7 +76,7 @@ class Normalizer:
         return cleaned if cleaned else None
     
     @staticmethod
-    def normalize_integer(value_str: Optional[str]) -> Optional[int]:
+    def normalize_integer(value_str: Any) -> Optional[int]:
         """
         Extract integer from string (for bedrooms, bathrooms, etc.).
         
@@ -83,13 +86,16 @@ class Normalizer:
             "Two" -> None (text numbers not supported yet)
         
         Args:
-            value_str: Raw string containing number
+            value_str: Raw string containing number or already normalized numeric value
             
         Returns:
             Integer value or None
         """
-        if not value_str:
+        if value_str is None:
             return None
+            
+        if isinstance(value_str, (int, float)):
+            return int(value_str)
         
         try:
             # Extract first number found
@@ -97,7 +103,7 @@ class Normalizer:
             if match:
                 return int(match.group())
             return None
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Failed to normalize integer '{value_str}': {e}")
             return None
     

@@ -69,3 +69,5 @@ data/
 *.json
 !config/*.json
 !config/*.yaml
+
+debug_property24_page1.html

@@ -31,8 +31,9 @@ class BaseRealEstateSpider(scrapy.Spider):
         self.parser = Parser(selectors)
         self.normalizer = Normalizer()
         
-        # Set start URLs
-        self.start_urls = self.site_config.get('start_urls', [])
+        # Set start URLs if not already provided (e.g., via command line)
+        if not self.start_urls:
+            self.start_urls = self.site_config.get('start_urls', [])
         
         # Pagination settings
         self.pagination_config = self.site_config.get('pagination', {})
@@ -162,16 +163,13 @@ class BaseRealEstateSpider(scrapy.Spider):
         # Extract raw data
         raw_data = self.parser.parse_listing_detail(response)
         
-        # Normalize data
-        normalized_data = self.normalizer.normalize_listing(raw_data)
-        
-        # Add metadata
-        normalized_data['source_site'] = self.site_key
-        normalized_data['scraped_at'] = scrapy.utils.misc.load_object(
+        # Item metadata (normalization happens in pipeline)
+        raw_data['source_site'] = self.site_key
+        raw_data['scraped_at'] = scrapy.utils.misc.load_object(
             'datetime.datetime'
         ).now().isoformat()
         
-        return normalized_data
+        return raw_data
     
     def handle_error(self, failure):
         """
