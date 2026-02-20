@@ -5,6 +5,7 @@ import os
 import nopecha
 from loguru import logger
 from config.settings import settings
+from nopecha.api.requests import RequestsAPIClient
 
 class CaptchaResolver:
     """Handles CAPTCHA solving using NopeCHA."""
@@ -28,10 +29,10 @@ class CaptchaResolver:
         """
         logger.info(f"Solving reCAPTCHA for {url}...")
         try:
-            token = nopecha.Token.solve(
-                type='recaptcha2', # Property24 uses v2-like challenge often
-                sitekey=site_key,
-                url=url
+            client = RequestsAPIClient(self.api_key)
+            token = client.solve_recaptcha_v3(
+                site_key,
+                url,
             )
             logger.success("reCAPTCHA solved successfully")
             return token

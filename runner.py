@@ -112,6 +112,8 @@ Examples:
     
     # Get Scrapy settings
     settings = get_project_settings()
+    if args.verbose:
+        settings.set('LOG_LEVEL', 'DEBUG')
     
     # Create crawler process
     process = CrawlerProcess(settings)

@@ -18,4 +18,4 @@ loguru>=0.7.2
 # schedule>=1.2.0    # For future scheduling
 
 # CAPTCHA solving
-nopecha>=0.3.0
+nopecha
