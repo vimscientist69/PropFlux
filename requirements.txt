@@ -17,5 +17,6 @@ loguru>=0.7.2
 # streamlit>=1.29.0  # For future UI
 # schedule>=1.2.0    # For future scheduling
 
-# CAPTCHA solving
+# CAPTCHA solving & browser automation
 nopecha
+selenium>=4.15.0

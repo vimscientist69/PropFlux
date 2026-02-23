@@ -29,6 +29,10 @@ sites:
       agent_profile_url: ".p24_agentPhoto a::attr(href)"
       contact_value: ".js_agentDetails::attr(data-value)"
     
+    phone_retrieval:
+      show_number_btn: "a.p24_contactEmailsLink"
+      phone_result: ".p24_mobileNumber"
+    
     pagination:
       type: "pattern"
       url_template: "{base_url}/p{page}"

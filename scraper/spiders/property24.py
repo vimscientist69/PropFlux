@@ -41,45 +41,22 @@ class Property24Spider(BaseRealEstateSpider):
         Using guard clauses to handle unhappy paths early and reduce nesting.
         """
         item = super().parse_listing(response)
-        
-        # Guard: Only proceed if phone is missing
+
+        # Guard: Only fetch phone if it's not already in the page's HTML
         if item.get('agent_phone'):
             return item
 
         try:
-            import re
             from core.phone_service import PhoneService
             
-            # Extract dynamic values
-            # agent url format example: "/estate-agents/revo-property/raven-skinner/413016"
-            agent_url = response.css(self.site_config['selectors'].get('agent_profile_url')).get()
-            contact_val = response.css(self.site_config['selectors'].get('contact_value')).get()
-            listing_id = item.get('listing_id')
-            
-            # Guard: Ensure all values are present
-            if not all([agent_url, contact_val, listing_id]):
-                return item
+            phone = PhoneService().get_property24_phone(url=response.url)
+            if phone:
+                item['agent_phone'] = phone
+                logger.info(f"Updated agent_phone for {item.get('listing_id')}")
 
-            # Guard: Extract agent ID from url like /estate-agents/revo-property/raven-skinner/413016
-            agent_match = re.search(r'/estate-agents/([^/]+)/([^/]+)/(\d+)', agent_url)
-            if not agent_match:
-                return item
-            
-            # Fetch phone number
-            service = PhoneService()
-            phone_data = service.get_property24_phone(
-                url=response.url,
-                agent_id=int(agent_match.group(3)),
-                contact_value=contact_val,
-                listing_number=int(listing_id)
-            )
-            
-            if phone_data:
-                item['agent_phone'] = phone_data
-                logger.info(f"Updated agent_phone for {listing_id}")
-                
         except Exception as e:
-            logger.error(f"Error in Property24 custom phone extraction: {e}")
-        
+            logger.error(f"Error in Property24 phone extraction: {e}")
+
         return item
+
 
