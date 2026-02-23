@@ -16,9 +16,9 @@ class CaptchaResolver:
             logger.error("NOPECHA_API_KEY not found in settings")
         nopecha.api_key = self.api_key
 
-    def solve_recaptcha(self, site_key: str, url: str) -> str:
+    def solve_recaptcha_v3(self, site_key: str, url: str) -> str:
         """
-        Solve reCAPTCHA v2/v3 and return the token.
+        Solve reCAPTCHA v3 and return the token.
         
         Args:
             site_key: The sitekey for the reCAPTCHA
@@ -30,10 +30,14 @@ class CaptchaResolver:
         logger.info(f"Solving reCAPTCHA for {url}...")
         try:
             client = RequestsAPIClient(self.api_key)
-            token = client.solve_recaptcha_v3(
+            token = client.solve_recaptcha_v2(
                 site_key,
                 url,
             )
+            # token = client.solve_recaptcha_v3(
+            #     site_key,
+            #     url,
+            # )
             logger.success("reCAPTCHA solved successfully")
             return token
         except Exception as e:

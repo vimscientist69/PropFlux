@@ -44,7 +44,7 @@ class PhoneService:
             return None
 
         # Solve CAPTCHA
-        token = self.resolver.solve_recaptcha(site_key, url)
+        token = self.resolver.solve_recaptcha_v3(site_key, url)
         if not token:
             return None
 
