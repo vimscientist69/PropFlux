@@ -15,8 +15,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.common.action_chains import ActionChains
 from config.settings import settings
-
+import random
 
 def _load_phone_config(site_key: str) -> dict:
     """Load phone_retrieval selectors for a given site from sites.yaml."""
@@ -25,7 +26,6 @@ def _load_phone_config(site_key: str) -> dict:
         config = yaml.safe_load(f)
     site = config.get("sites", {}).get(site_key, {})
     return site.get("phone_retrieval", {})
-
 
 def _build_driver() -> webdriver.Chrome:
     """Build a Chrome driver using the persistent NopeCHA profile.
@@ -156,14 +156,25 @@ class PhoneService:
 
             # 3. Find and click the "Show Contact Number" button
             logger.info("Phone Service: Waiting for 'Show Number' button...")
-            wait = WebDriverWait(driver, 20)
-            show_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, show_btn_sel)))
+            wait = WebDriverWait(driver, 200)
+
             logger.info("Phone Service: Clicking 'Show Number' button...")
-            driver.execute_script("arguments[0].click();", show_btn)
+
+            # scroll down between 250 and 300px using random from math lib, smoothly and slowly
+            # using action chains to avoid bot-detection mechanisms from getting triggered.
+
+            show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
+            show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
+
+            actions = ActionChains(driver)
+            actions.move_to_element(show_btn)   # moves the actual cursor to the element
+            actions.pause(0.5)                  # brief human-like pause
+            actions.click(show_btn)
+            actions.perform()
 
             # 4. Wait for the phone number (NopeCHA auto-solves the CAPTCHA)
             logger.info("Phone Service: Waiting for phone number (NopeCHA will auto-solve CAPTCHA)...")
-            phone_el = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, phone_result_sel)))
+            phone_el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, phone_result_sel)))
             phone = phone_el.text.strip()
 
             if phone:

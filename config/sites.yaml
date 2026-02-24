@@ -31,7 +31,7 @@ sites:
     
     phone_retrieval:
       show_number_btn: "a.p24_contactEmailsLink"
-      phone_result: ".p24_mobileNumber"
+      phone_result: "span.p24_sidebarAgentContactNumber"
     
     pagination:
       type: "pattern"
