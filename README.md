@@ -55,6 +55,54 @@ python runner.py --site property24 --max-pages 5
 python runner.py --site property24 --verbose
 ```
 
+## 📞 Phone Number Retrieval (NopeCHA CAPTCHA Solver)
+
+Some sites (e.g. Property24) hide agent phone numbers behind a CAPTCHA. This project uses the [NopeCHA](https://nopecha.com) browser extension with a **persistent Chrome profile** to auto-solve CAPTCHAs via Selenium.
+
+> **The `chrome-profiles/` directory is gitignored** — your API key and session data are never committed.
+
+### One-Time Setup (per developer)
+
+**Prerequisites**
+- A NopeCHA API key — sign up at [nopecha.com](https://nopecha.com)
+- Set it in your `.env` file: `NOPECHA_API_KEY=your_key_here`
+
+**Run the setup command:**
+
+```bash
+python runner.py --setup-chrome-profile
+```
+
+This opens a Chrome window with a dedicated profile and prints these instructions:
+
+```
+============================================================
+ NopeCHA Chrome Profile Setup
+============================================================
+
+A Chrome window is opening with a dedicated profile.
+Please follow these steps in the browser:
+
+  STEP 1 — Install the NopeCHA extension:
+    https://chromewebstore.google.com/detail/nopecha-captcha-solver/...
+
+  STEP 2 — Authenticate with your API key:
+    https://nopecha.com/setup#YOUR_API_KEY_HERE
+
+  STEP 3 — Once done, close the browser window.
+============================================================
+```
+
+After setup, the profile is saved to `chrome-profiles/nopecha-profile/`. All future scraper runs reuse this profile — **no re-authentication needed**.
+
+### How It Works
+
+| Step | What happens |
+|------|--------------|
+| `--setup-chrome-profile` | Opens Chrome, developer installs extension + enters API key once |
+| Normal scrape run | Selenium reuses the saved profile; NopeCHA is already active |
+| CAPTCHA encountered | NopeCHA auto-solves it in the background; phone number is revealed |
+
 ## 📁 Project Structure
 
 ```
@@ -70,9 +118,11 @@ multi-site-real-estate-scraper/
 │   ├── parser.py               # HTML parsing logic
 │   ├── normalizer.py           # Data normalization
 │   ├── deduplicator.py         # Duplicate removal
-│   └── exporter.py             # Export to CSV/JSON/SQLite
+│   ├── exporter.py             # Export to CSV/JSON/SQLite
+│   └── phone_service.py        # Selenium + NopeCHA phone retrieval
 ├── config/
 │   └── sites.yaml              # Site configurations
+├── chrome-profiles/            # Persistent Chrome profile (gitignored)
 ├── output/                     # Generated files (CSV, JSON, DB)
 ├── logs/                       # Log files
 ├── runner.py                   # Main entry point

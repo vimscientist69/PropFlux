@@ -43,6 +43,10 @@ output/*.json
 output/*.db
 output/*.sqlite
 output/*.sqlite3
+output/nopecha_ext
+output/nopecha_chromium.zip
+output/chrome_profile
+
 
 # Logs
 logs/*.log
@@ -71,3 +75,4 @@ data/
 !config/*.yaml
 
 debug_property24_page1.html
+chrome-profiles/

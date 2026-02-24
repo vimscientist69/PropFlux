@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from scraper.spiders.property24 import Property24Spider
 from scraper.spiders.privateproperty import PrivatePropertySpider
+from core.phone_service import setup_chrome_profile
 
 
 # Map site names to spider classes
@@ -66,16 +67,23 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  python runner.py --setup-chrome-profile
   python runner.py --site property24
   python runner.py --site privateproperty --url "https://example.com/search"
   python runner.py --site property24 --verbose
         """
     )
+
+    parser.add_argument(
+        '--setup-chrome-profile',
+        action='store_true',
+        help='Open a Chrome browser to set up the NopeCHA extension (one-time setup)'
+    )
     
     parser.add_argument(
         '--site',
         type=str,
-        required=True,
+        required=False,
         choices=list(SPIDER_MAP.keys()),
         help='Site to scrape (property24, privateproperty)'
     )
@@ -100,7 +108,15 @@ Examples:
     )
     
     args = parser.parse_args()
-    
+
+    # Handle one-time Chrome profile setup
+    if args.setup_chrome_profile:
+        setup_chrome_profile()
+        return
+
+    if not args.site:
+        parser.error('--site is required unless --setup-chrome-profile is used')
+
     # Setup logging
     setup_logging(args.verbose)
     
