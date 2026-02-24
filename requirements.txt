@@ -20,3 +20,4 @@ loguru>=0.7.2
 # CAPTCHA solving & browser automation
 nopecha
 selenium>=4.15.0
+selenium-stealth

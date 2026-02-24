@@ -16,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium_stealth import stealth
 from config.settings import settings
 import random
 
@@ -44,8 +45,19 @@ def _build_driver() -> webdriver.Chrome:
     options.add_argument("--window-size=1280,900")
 
     driver = webdriver.Chrome(options=options)
+    
+    # Anti-bot detection: Stealth
+    stealth(driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="MacIntel",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )
+    
     # Allow MV3 service worker (NopeCHA) a moment to register
-    time.sleep(3)
+    time.sleep(random.uniform(2.5, 4.0))
     driver.implicitly_wait(5)
     return driver
 
@@ -150,8 +162,9 @@ class PhoneService:
         driver = _build_driver()
 
         try:
-            # 1. Navigate to the listing page
+            # 2. Navigate to the listing page
             logger.info(f"Phone Service: Navigating to {url}")
+            time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
             driver.get(url)
 
             # 3. Find and click the "Show Contact Number" button
@@ -160,15 +173,16 @@ class PhoneService:
 
             logger.info("Phone Service: Clicking 'Show Number' button...")
 
-            # scroll down between 250 and 300px using random from math lib, smoothly and slowly
-            # using action chains to avoid bot-detection mechanisms from getting triggered.
-
             show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
             show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
 
+            # scroll down until show_btn is visible
+            driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", show_btn)
+            time.sleep(random.uniform(1.0, 2.0))
+            
             actions = ActionChains(driver)
             actions.move_to_element(show_btn)   # moves the actual cursor to the element
-            actions.pause(0.5)                  # brief human-like pause
+            actions.pause(random.uniform(0.4, 0.8))  # brief human-like pause
             actions.click(show_btn)
             actions.perform()
 
