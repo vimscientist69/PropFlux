@@ -59,10 +59,12 @@ class BaseRealEstateSpider(scrapy.Spider):
     def start_requests(self) -> Generator:
         """Generate initial requests for listing pages."""
         for url in self.start_urls:
+            raw_url = url.split('/p')[0] if '/p' in url else url
             yield scrapy.Request(
                 url=url,
                 callback=self.parse,
-                errback=self.handle_error
+                errback=self.handle_error,
+                meta={'search_base_url': raw_url}
             )
 
     def get_next_page_url(self, response: Response) -> Optional[str]:
@@ -76,7 +78,7 @@ class BaseRealEstateSpider(scrapy.Spider):
             URL for next page, or None
         """
         if self.total_pages is None:
-            self.total_pages = self.parser.parse_total_pages(response)
+            self.total_pages = self.parser.parse_total_pages(self.pagination_config, response)
             logger.info(f"Total pages found: {self.total_pages}")
         
         next_page_num = self.current_page + 1
@@ -95,10 +97,8 @@ class BaseRealEstateSpider(scrapy.Spider):
         if pag_type == 'pattern':
             template = self.pagination_config.get('url_template')
             if template:
-                # Assuming base_url is configured and doesn't end with / if we add one
-                base_url = self.site_config.get('base_url', '').rstrip('/')
-                # If the start_url already has the query params we need, we might need a smarter merge
-                # For now, let's assume the template is correct as per user request
+                # Use the actual search results URL from this specific request chain
+                base_url = response.meta.get('search_base_url', '').rstrip('/')
                 return template.format(base_url=base_url, page=next_page_num)
         
         # Fallback to next link extraction
@@ -139,14 +139,14 @@ class BaseRealEstateSpider(scrapy.Spider):
                 errback=self.handle_error
             )
         
-        # Follow pagination
         next_page = self.get_next_page_url(response)
         if next_page:
             logger.info(f"Following next page: {next_page}")
             yield scrapy.Request(
                 url=next_page,
                 callback=self.parse,
-                errback=self.handle_error
+                errback=self.handle_error,
+                meta={'search_base_url': response.meta.get('search_base_url')}
             )
     
     def parse_listing(self, response: Response) -> Dict[str, Any]:
