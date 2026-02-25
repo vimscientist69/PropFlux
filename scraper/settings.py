@@ -42,9 +42,9 @@ DEFAULT_REQUEST_HEADERS = {
 # }
 
 # Enable or disable downloader middlewares
-# DOWNLOADER_MIDDLEWARES = {
-#    'scraper.middlewares.ScraperDownloaderMiddleware': 543,
-# }
+DOWNLOADER_MIDDLEWARES = {
+   'scraper.middlewares.UnifiedRateLimitMiddleware': 100,
+}
 
 # Enable or disable extensions
 # EXTENSIONS = {

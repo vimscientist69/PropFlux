@@ -17,6 +17,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium_stealth import stealth
+from core.rate_limiter import rate_limiter
 from config.settings import settings
 import random
 
@@ -27,6 +28,22 @@ def _load_phone_config(site_key: str) -> dict:
         config = yaml.safe_load(f)
     site = config.get("sites", {}).get(site_key, {})
     return site.get("phone_retrieval", {})
+
+
+def _wait_for_rate_limit(site_key: str) -> None:
+    """
+    Retrieves the RPM limit for the site and waits for a slot from the global rate limiter.
+    """
+    config_path = Path(__file__).parent.parent / "config" / "sites.yaml"
+    with open(config_path) as f:
+        full_config = yaml.safe_load(f)
+    
+    # Get RPM limit from config, default to 3 if not specified
+    rpm = full_config.get("sites", {}).get(site_key, {}).get("rate_limit", {}).get("requests_per_minute", 3)
+
+    # Wait for global slot
+    logger.info(f"Phone Service: Waiting for global rate limit slot (Target RPM: {rpm})")
+    rate_limiter.wait_for_slot(site_key, rpm)
 
 def _build_driver() -> webdriver.Chrome:
     """Build a Chrome driver using the persistent NopeCHA profile.
@@ -163,6 +180,9 @@ class PhoneService:
         driver = _build_driver()
 
         try:
+            # Respect global rate limit across Scrapy and Selenium
+            _wait_for_rate_limit(site_key)
+
             # 2. Navigate to the listing page
             logger.info(f"Phone Service: Navigating to {url}")
             time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
