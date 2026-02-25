@@ -16,7 +16,8 @@ class Settings:
     
     # API Keys & Proxies (Secrets)
     NOPECHA_API_KEY = os.getenv("NOPECHA_API_KEY")
-    PROXY_URL = os.getenv("PROXY_URL")
+    ROTATING_PROXY_URL = os.getenv("ROTATING_PROXY_URL")
+    STICKY_PROXY_URL = os.getenv("STICKY_PROXY_URL")
     
     # Site Constants (Non-secrets)
     PROPERTY24_RECAPTCHA_SITEKEY = "6LcGHUEUAAAAAAfppsl05ypEC9L5KgUG3JYkpoF7"

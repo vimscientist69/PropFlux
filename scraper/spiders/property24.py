@@ -35,21 +35,24 @@ class Property24Spider(BaseRealEstateSpider):
         # Use base class logic to process links and pagination
         yield from super().parse(response)
 
-    def parse_listing(self, response):
+    async def parse_listing(self, response):
         """
         Custom parse_listing for Property24 to include phone number retrieval.
-        Using guard clauses to handle unhappy paths early and reduce nesting.
+        Using async/await and deferToThread to run Selenium in parallel.
         """
+        from twisted.internet.threads import deferToThread
+        from core.phone_service import PhoneService
+        
         item = super().parse_listing(response)
 
         # Guard: Only fetch phone if it's not already in the page's HTML
         if item.get('agent_phone'):
-            return item
+            yield item
+            return
 
         try:
-            from core.phone_service import PhoneService
-            
-            phone = PhoneService().get_property24_phone(url=response.url)
+            # Run the blocking Selenium call in a separate thread
+            phone = await deferToThread(PhoneService().get_property24_phone, response.url)
             if phone:
                 item['agent_phone'] = phone
                 logger.info(f"Updated agent_phone for {item.get('listing_id')}")
@@ -57,6 +60,4 @@ class Property24Spider(BaseRealEstateSpider):
         except Exception as e:
             logger.error(f"Error in Property24 phone extraction: {e}")
 
-        return item
-
-
+        yield item

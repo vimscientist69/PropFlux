@@ -15,10 +15,10 @@ class RotateUserAgentMiddleware:
 class UnifiedProxyMiddleware:
     """Middleware to set the proxy from central settings."""
     def process_request(self, request, spider):
-        proxy = settings.PROXY_URL
+        proxy = settings.ROTATING_PROXY_URL
         if proxy:
             request.meta['proxy'] = proxy
-            logger.debug(f"Middleware: Using proxy for {request.url}")
+            logger.debug(f"Middleware: Using rotating proxy for {request.url}")
 
 class UnifiedRateLimitMiddleware:
     """

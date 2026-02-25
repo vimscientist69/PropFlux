@@ -9,6 +9,7 @@ import time
 import yaml
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse, urlunparse
 from loguru import logger
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -52,6 +53,30 @@ def _wait_for_rate_limit(site_key: str) -> None:
     # Wait for global slot
     logger.info(f"Phone Service: Waiting for global rate limit slot (Target RPM: {rpm})")
     rate_limiter.wait_for_slot(site_key, rpm)
+
+def _get_sessionized_proxy_url(base_proxy_url: str) -> str:
+    """
+    Injects a unique sessid into the proxy URL for DataImpulse-style sticky sessions.
+    Format: http://user__sessid.RANDOM:pass@host:port
+    """
+    parsed = urlparse(base_proxy_url)
+    if not parsed.username:
+        return base_proxy_url
+    
+    sessid = random.getrandbits(32)
+    new_username = f"{parsed.username}__sessid.{sessid}"
+    
+    # Reconstruct the netloc with the new username
+    # netloc is user:pass@host:port
+    auth = new_username
+    if parsed.password:
+        auth += f":{parsed.password}"
+    
+    new_netloc = f"{auth}@{parsed.hostname}"
+    if parsed.port:
+        new_netloc += f":{parsed.port}"
+        
+    return urlunparse(parsed._replace(netloc=new_netloc))
 
 def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None) -> webdriver.Chrome:
     """Build a Chrome driver using the persistent NopeCHA profile.
@@ -218,7 +243,9 @@ class PhoneService:
             return None
 
         ua = get_random_ua()
-        proxy = settings.PROXY_URL
+        proxy_base = settings.STICKY_PROXY_URL
+        proxy = _get_sessionized_proxy_url(proxy_base) if proxy_base else None
+        
         driver = _build_driver(ua=ua, proxy=proxy)
 
         try:
