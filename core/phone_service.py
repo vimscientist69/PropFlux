@@ -42,6 +42,7 @@ def _build_driver() -> webdriver.Chrome:
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--headless")
     options.add_argument("--window-size=1280,900")
 
     driver = webdriver.Chrome(options=options)
