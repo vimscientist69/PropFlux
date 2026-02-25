@@ -220,14 +220,14 @@ class PhoneService:
             return None
 
         except TimeoutException:
-            logger.error("Phone Service: Timed out waiting for button or phone number")
+            logger.error(f"Phone Service: Timed out waiting for button or phone number at {url}")
             return None
         except NoSuchElementException as e:
-            logger.error(f"Phone Service: Element not found: {e}")
+            logger.error(f"Phone Service: Element not found at {url}: {e}")
             return None
         except Exception as e:
-            logger.error(f"Phone Service: Unexpected error: {e}")
+            logger.error(f"Phone Service: Unexpected error at {url}: {e}")
             return None
         finally:
             driver.quit()
-            logger.info("Phone Service: Driver closed")
+            logger.info(f"Phone Service: Driver closed for {url}")
