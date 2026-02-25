@@ -1,7 +1,24 @@
 from scrapy import signals
 from urllib.parse import urlparse
 from core.rate_limiter import rate_limiter
+from core.user_agents import get_random_ua
+from config.settings import settings
 from loguru import logger
+
+class RotateUserAgentMiddleware:
+    """Middleware to set a random User-Agent for every request."""
+    def process_request(self, request, spider):
+        ua = get_random_ua()
+        request.headers['User-Agent'] = ua
+        logger.debug(f"Middleware: Set User-Agent to {ua[:30]}...")
+
+class UnifiedProxyMiddleware:
+    """Middleware to set the proxy from central settings."""
+    def process_request(self, request, spider):
+        proxy = settings.PROXY_URL
+        if proxy:
+            request.meta['proxy'] = proxy
+            logger.debug(f"Middleware: Using proxy for {request.url}")
 
 class UnifiedRateLimitMiddleware:
     """

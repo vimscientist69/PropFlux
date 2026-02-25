@@ -14,12 +14,20 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium_stealth import stealth
 from core.rate_limiter import rate_limiter
+from core.user_agents import get_random_ua
 from config.settings import settings
 import random
+
+# Optional selenium-wire for proxy auth
+try:
+    from seleniumwire import webdriver as wire_webdriver
+    SELENIUM_WIRE_AVAILABLE = True
+except ImportError:
+    SELENIUM_WIRE_AVAILABLE = False
 
 def _load_phone_config(site_key: str) -> dict:
     """Load phone_retrieval selectors for a given site from sites.yaml."""
@@ -45,14 +53,19 @@ def _wait_for_rate_limit(site_key: str) -> None:
     logger.info(f"Phone Service: Waiting for global rate limit slot (Target RPM: {rpm})")
     rate_limiter.wait_for_slot(site_key, rpm)
 
-def _build_driver() -> webdriver.Chrome:
+def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None) -> webdriver.Chrome:
     """Build a Chrome driver using the persistent NopeCHA profile.
-
-    The profile must be set up first via:
-      python runner.py --setup-chrome-profile
+    
+    Args:
+        ua: User-agent string to use.
+        proxy: Proxy URL (http://user:pass@host:port).
     """
     options = webdriver.ChromeOptions()
     options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR.resolve()}")
+    
+    if ua:
+        options.add_argument(f'--user-agent={ua}')
+    
     options.add_argument('--disable-infobars')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
@@ -62,7 +75,20 @@ def _build_driver() -> webdriver.Chrome:
     options.add_argument("--headless")
     options.add_argument("--window-size=1280,900")
 
-    driver = webdriver.Chrome(options=options)
+    seleniumwire_options = {}
+    if proxy and SELENIUM_WIRE_AVAILABLE:
+        seleniumwire_options = {
+            'proxy': {
+                'http': proxy,
+                'https': proxy,
+                'no_proxy': 'localhost,127.0.0.1'
+            }
+        }
+        driver = wire_webdriver.Chrome(options=options, seleniumwire_options=seleniumwire_options)
+    else:
+        if proxy and not SELENIUM_WIRE_AVAILABLE:
+            logger.warning("Proxy configured but selenium-wire not installed. Using direct connection.")
+        driver = webdriver.Chrome(options=options)
     
     # Anti-bot detection: Stealth
     stealth(driver,
@@ -150,10 +176,24 @@ class PhoneService:
 
     def get_property24_phone(self, url: str, **kwargs) -> Optional[str]:
         """
-        Navigate to a Property24 listing, click 'Show Number', let NopeCHA
-        auto-solve any CAPTCHA, and return the revealed phone number.
+        Navigate to a Property24 listing with retries.
         """
-        return self._get_phone(url=url, site_key='property24')
+        max_retries = kwargs.get('retries', 3)
+        for attempt in range(max_retries):
+            try:
+                phone = self._get_phone(url=url, site_key='property24')
+                if phone:
+                    return phone
+                logger.warning(f"Phone Service: Attempt {attempt + 1} failed for {url}")
+            except Exception as e:
+                logger.error(f"Phone Service: Attempt {attempt + 1} crashed: {e}")
+            
+            if attempt < max_retries - 1:
+                # Exponential backoff with jitter
+                wait_time = (2 ** attempt) + random.uniform(1, 3)
+                logger.info(f"Phone Service: Waiting {wait_time:.1f}s before retry...")
+                time.sleep(wait_time)
+        return None
 
     def _get_phone(self, url: str, site_key: str) -> Optional[str]:
         """Core Selenium logic — navigates to the URL and extracts the phone number."""
@@ -177,7 +217,9 @@ class PhoneService:
             )
             return None
 
-        driver = _build_driver()
+        ua = get_random_ua()
+        proxy = settings.PROXY_URL
+        driver = _build_driver(ua=ua, proxy=proxy)
 
         try:
             # Respect global rate limit across Scrapy and Selenium
@@ -219,8 +261,8 @@ class PhoneService:
             logger.warning("Phone Service: Phone element visible but text was empty")
             return None
 
-        except TimeoutException:
-            logger.error(f"Phone Service: Timed out waiting for button or phone number at {url}")
+        except (TimeoutException, WebDriverException) as e:
+            logger.error(f"Phone Service: Driver error at {url}: {e}")
             return None
         except NoSuchElementException as e:
             logger.error(f"Phone Service: Element not found at {url}: {e}")
@@ -229,5 +271,8 @@ class PhoneService:
             logger.error(f"Phone Service: Unexpected error at {url}: {e}")
             return None
         finally:
-            driver.quit()
-            logger.info(f"Phone Service: Driver closed for {url}")
+            try:
+                driver.quit()
+                logger.info(f"Phone Service: Driver closed for {url}")
+            except:
+                pass

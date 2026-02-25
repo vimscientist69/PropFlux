@@ -14,8 +14,8 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 ROBOTSTXT_OBEY = True
 
 # Configure maximum concurrent requests
-CONCURRENT_REQUESTS = 1
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
+CONCURRENT_REQUESTS = 4
+CONCURRENT_REQUESTS_PER_DOMAIN = 4
 
 # Configure a delay for requests
 DOWNLOAD_DELAY = 1
@@ -43,7 +43,9 @@ DEFAULT_REQUEST_HEADERS = {
 
 # Enable or disable downloader middlewares
 DOWNLOADER_MIDDLEWARES = {
-   'scraper.middlewares.UnifiedRateLimitMiddleware': 100,
+   'scraper.middlewares.RotateUserAgentMiddleware': 50,
+   'scraper.middlewares.UnifiedProxyMiddleware': 100,
+   'scraper.middlewares.UnifiedRateLimitMiddleware': 150,
 }
 
 # Enable or disable extensions
@@ -74,8 +76,8 @@ HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 # Retry settings
 RETRY_ENABLED = True
-RETRY_TIMES = 3
-RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
+RETRY_TIMES = 5
+RETRY_HTTP_CODES = [403, 429, 500, 502, 503, 504, 408]
 
 # Logging
 LOG_LEVEL = 'INFO'
