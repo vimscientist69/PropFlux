@@ -78,6 +78,20 @@ def _get_sessionized_proxy_url(base_proxy_url: str) -> str:
         
     return urlunparse(parsed._replace(netloc=new_netloc))
 
+def _human_scroll(driver: webdriver.Chrome, element):
+    """Scroll to an element using variable speed and small steps to mimic a human."""
+    target_y = element.location['y'] - 200 # Leave some space at the top
+    current_y = driver.execute_script("return window.pageYOffset;")
+    distance = target_y - current_y
+    
+    if distance > 0:
+        # Scroll down in chunks
+        steps = random.randint(5, 12)
+        for i in range(steps):
+            amount = (distance / steps) + random.uniform(-10, 10)
+            driver.execute_script(f"window.scrollBy(0, {amount});")
+            time.sleep(random.uniform(0.1, 0.3))
+
 def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None) -> webdriver.Chrome:
     """Build a Chrome driver using the persistent NopeCHA profile.
     
@@ -266,14 +280,21 @@ class PhoneService:
             show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
             show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
 
-            # scroll down until show_btn is visible
-            driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", show_btn)
-            time.sleep(random.uniform(1.0, 2.0))
+            # 3.1 Human-like scrolling
+            _human_scroll(driver, show_btn)
+            time.sleep(random.uniform(0.8, 1.5))
             
+            # 3.2 Human-like mouse movements
             actions = ActionChains(driver)
-            actions.move_to_element(show_btn)   # moves the actual cursor to the element
-            actions.pause(random.uniform(0.4, 0.8))  # brief human-like pause
-            actions.click(show_btn)
+            
+            # Hover with a bit of "jitter"
+            actions.move_to_element_with_offset(show_btn, random.randint(-5, 5), random.randint(-5, 5))
+            actions.pause(random.uniform(0.5, 1.2))
+            
+            # Click with slight offset
+            actions.click_and_hold(show_btn)
+            actions.pause(random.uniform(0.1, 0.2)) # Brief hold
+            actions.release()
             actions.perform()
 
             # 4. Wait for the phone number (NopeCHA auto-solves the CAPTCHA)
