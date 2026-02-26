@@ -104,7 +104,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         # Fallback to next link extraction
         return self.parser.parse_next_page(response)
 
-    def parse(self, response: Response) -> Generator:
+    async def parse(self, response: Response) -> Generator:
         """
         Parse listing page and extract listing URLs.
         
@@ -117,7 +117,8 @@ class BaseRealEstateSpider(scrapy.Spider):
         # Check if this is a direct listing detail page
         if self.parser.is_detail_page(response):
             logger.info(f"Direct listing detail page detected: {response.url}")
-            yield self.parse_listing(response)
+            async for item in self.parse_listing(response):
+                yield item
             return
 
         self.current_page += 1
@@ -149,14 +150,14 @@ class BaseRealEstateSpider(scrapy.Spider):
                 meta={'search_base_url': response.meta.get('search_base_url')}
             )
     
-    def parse_listing(self, response: Response) -> Dict[str, Any]:
+    async def parse_listing(self, response: Response) -> Generator:
         """
         Parse individual listing detail page.
         
         Args:
             response: Scrapy Response object
             
-        Returns:
+        Yields:
             Normalized listing data
         """
         logger.debug(f"Parsing listing: {response.url}")
@@ -170,7 +171,7 @@ class BaseRealEstateSpider(scrapy.Spider):
             'datetime.datetime'
         ).now().isoformat()
         
-        return raw_data
+        yield raw_data
     
     def handle_error(self, failure):
         """

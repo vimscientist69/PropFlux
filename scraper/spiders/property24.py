@@ -3,6 +3,7 @@ Property24 spider.
 """
 import scrapy
 from loguru import logger
+from scrapy.utils.defer import deferred_to_future
 from .base_spider import BaseRealEstateSpider
 
 
@@ -18,7 +19,7 @@ class Property24Spider(BaseRealEstateSpider):
         'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
     }
     
-    def parse(self, response):
+    async def parse(self, response):
         """Parse listing links from the search page."""
         # Capture debug info on first page
         if self.current_page == 0:  # current_page starts at 0, becomes 1 in super().parse()
@@ -33,7 +34,8 @@ class Property24Spider(BaseRealEstateSpider):
                 logger.error(f"Failed to capture debug info: {e}")
         
         # Use base class logic to process links and pagination
-        yield from super().parse(response)
+        async for item in super().parse(response):
+            yield item
 
     async def parse_listing(self, response):
         """
@@ -43,7 +45,14 @@ class Property24Spider(BaseRealEstateSpider):
         from twisted.internet.threads import deferToThread
         from core.phone_service import PhoneService
         
-        item = super().parse_listing(response)
+        # Get base item from the async generator
+        item = None
+        async for base_item in super().parse_listing(response):
+            item = base_item
+            break
+        
+        if not item:
+            return
 
         # Guard: Only fetch phone if it's not already in the page's HTML
         if item.get('agent_phone'):
@@ -52,7 +61,8 @@ class Property24Spider(BaseRealEstateSpider):
 
         try:
             # Run the blocking Selenium call in a separate thread
-            phone = await deferToThread(PhoneService().get_property24_phone, response.url)
+            # Wrap deferToThread in deferred_to_future for clean async/await in Scrapy
+            phone = await deferred_to_future(deferToThread(PhoneService().get_property24_phone, response.url))
             if phone:
                 item['agent_phone'] = phone
                 logger.info(f"Updated agent_phone for {item.get('listing_id')}")

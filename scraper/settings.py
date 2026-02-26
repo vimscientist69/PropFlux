@@ -13,6 +13,9 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
 
+# Use Asyncio reactor for better async/await support on macOS
+TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
+
 # Configure maximum concurrent requests
 CONCURRENT_REQUESTS = 4
 CONCURRENT_REQUESTS_PER_DOMAIN = 4

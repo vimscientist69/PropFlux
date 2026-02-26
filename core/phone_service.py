@@ -7,6 +7,8 @@ Requires a one-time Chrome profile setup:
 """
 import time
 import yaml
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse, urlunparse
@@ -92,15 +94,21 @@ def _human_scroll(driver: webdriver.Chrome, element):
             driver.execute_script(f"window.scrollBy(0, {amount});")
             time.sleep(random.uniform(0.1, 0.3))
 
-def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None) -> webdriver.Chrome:
-    """Build a Chrome driver using the persistent NopeCHA profile.
+def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_data_dir: Optional[str] = None) -> webdriver.Chrome:
+    """Build a Chrome driver using the provided profile path.
     
     Args:
-        ua: User-agent string to use.
-        proxy: Proxy URL (http://user:pass@host:port).
+        ua: Optional User-Agent string
+        proxy: Optional proxy URL
+        user_data_dir: Path to the Chrome user data directory (cloned for this session)
     """
     options = webdriver.ChromeOptions()
-    options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR.resolve()}")
+    
+    if user_data_dir:
+        # Use the cloned profile
+        options.add_argument(f"--user-data-dir={user_data_dir}")
+        # Note: If our profile has the extension in 'Default/Extensions', 
+        # Chrome should pick it up automatically from the copied folder.
     
     if ua:
         options.add_argument(f'--user-agent={ua}')
@@ -111,7 +119,7 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None) -> webd
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--headless")
+    options.add_argument("--headless=new") # Use new headless mode
     options.add_argument("--window-size=1280,900")
 
     seleniumwire_options = {}
@@ -260,9 +268,27 @@ class PhoneService:
         proxy_base = settings.STICKY_PROXY_URL
         proxy = _get_sessionized_proxy_url(proxy_base) if proxy_base else None
         
-        driver = _build_driver(ua=ua, proxy=proxy)
-
+        # 1. Create a unique temp directory for this browser instance to avoid profile locking
+        temp_dir = tempfile.mkdtemp(prefix="chrome_profile_")
+        source_profile = Path(__file__).parent.parent / "chrome-profiles" / "nopecha-profile"
+        
+        driver = None
         try:
+            if source_profile.exists():
+                # Copy the Entire profile to our temp folder
+                # We ignore lock files and sockets that causes errors during copying
+                shutil.copytree(
+                    source_profile, 
+                    temp_dir, 
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('Singleton*', 'Lock', 'RunningChromeVersion')
+                )
+                logger.debug(f"Phone Service: Cloned profile to {temp_dir}")
+            else:
+                logger.warning(f"Phone Service: Source profile not found at {source_profile}")
+
+            driver = _build_driver(ua=ua, proxy=proxy, user_data_dir=temp_dir)
+            
             # Respect global rate limit across Scrapy and Selenium
             _wait_for_rate_limit(site_key)
 
@@ -319,8 +345,12 @@ class PhoneService:
             logger.error(f"Phone Service: Unexpected error at {url}: {e}")
             return None
         finally:
-            try:
+            if driver:
                 driver.quit()
-                logger.info(f"Phone Service: Driver closed for {url}")
-            except:
-                pass
+            # 2. Cleanup the temporary profile directory
+            try:
+                shutil.rmtree(temp_dir)
+                logger.debug(f"Phone Service: Cleaned up temp profile {temp_dir}")
+            except Exception as cleanup_err:
+                logger.warning(f"Phone Service: Failed to cleanup temp profile: {cleanup_err}")
+            logger.info(f"Phone Service: Driver closed for {url}")
