@@ -94,21 +94,20 @@ def _human_scroll(driver: webdriver.Chrome, element):
             driver.execute_script(f"window.scrollBy(0, {amount});")
             time.sleep(random.uniform(0.1, 0.3))
 
-def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_data_dir: Optional[str] = None) -> webdriver.Chrome:
+def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_data_dir: Optional[str] = None, headless: bool = True) -> webdriver.Chrome:
     """Build a Chrome driver using the provided profile path.
     
     Args:
         ua: Optional User-Agent string
         proxy: Optional proxy URL
         user_data_dir: Path to the Chrome user data directory (cloned for this session)
+        headless: Whether to run in headless mode
     """
     options = webdriver.ChromeOptions()
     
     if user_data_dir:
         # Use the cloned profile
         options.add_argument(f"--user-data-dir={user_data_dir}")
-        # Note: If our profile has the extension in 'Default/Extensions', 
-        # Chrome should pick it up automatically from the copied folder.
     
     if ua:
         options.add_argument(f'--user-agent={ua}')
@@ -119,11 +118,12 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--headless=new") # Use new headless mode
-    options.add_argument("--window-size=1280,900")
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--window-size=1920,1080") # Set common desktop resolution
 
     seleniumwire_options = {}
-    if proxy and SELENIUM_WIRE_AVAILABLE:
+    if proxy:
         seleniumwire_options = {
             'proxy': {
                 'http': proxy,
@@ -131,10 +131,12 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
                 'no_proxy': 'localhost,127.0.0.1'
             }
         }
+    
+    if SELENIUM_WIRE_AVAILABLE:
         driver = wire_webdriver.Chrome(options=options, seleniumwire_options=seleniumwire_options)
     else:
-        if proxy and not SELENIUM_WIRE_AVAILABLE:
-            logger.warning("Proxy configured but selenium-wire not installed. Using direct connection.")
+        if proxy:
+            logger.warning("Proxy configured but selenium-wire not installed. Using direct connection (auth may fail).")
         driver = webdriver.Chrome(options=options)
     
     # Anti-bot detection: Stealth
@@ -287,8 +289,32 @@ class PhoneService:
             else:
                 logger.warning(f"Phone Service: Source profile not found at {source_profile}")
 
-            driver = _build_driver(ua=ua, proxy=proxy, user_data_dir=temp_dir)
+            # Use global setting for headless, but allow override via kwargs
+            headless = kwargs.get('headless', settings.HEADLESS)
+            driver = _build_driver(ua=ua, proxy=proxy, user_data_dir=temp_dir, headless=headless)
             
+            # Anti-bot: Verification of Proxy IP
+            try:
+                driver.get("https://api.ipify.org")
+                logger.info(f"Phone Service: Browser External IP: {driver.find_element(By.TAG_NAME, 'body').text}")
+            except Exception as e:
+                logger.warning(f"Phone Service: Could not verify External IP: {e}")
+
+            # Stealth: Inject Realistic Headers via Selenium-Wire
+            if hasattr(driver, 'header_overrides'):
+                # Mimic a real Chrome 120+ request with modern security headers
+                driver.header_overrides = {
+                    'Referer': 'https://www.property24.com/',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Sec-Fetch-User': '?1',
+                    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    'Sec-Ch-Ua-Mobile': '?0',
+                    'Sec-Ch-Ua-Platform': '"macOS"',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+
             # Respect global rate limit across Scrapy and Selenium
             _wait_for_rate_limit(site_key)
 
@@ -296,6 +322,20 @@ class PhoneService:
             logger.info(f"Phone Service: Navigating to {url}")
             time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
             driver.get(url)
+
+            # 2.1 Block Detection
+            if "Server unavailable" in driver.page_source:
+                logger.error(f"Phone Service: Blocked! 'Server unavailable' detected at {url}")
+                # Save debug screenshot if blocked
+                try:
+                    debug_path = Path("output/blocks")
+                    debug_path.mkdir(parents=True, exist_ok=True)
+                    screenshot_file = debug_path / f"block_{int(time.time())}.png"
+                    driver.save_screenshot(str(screenshot_file))
+                    logger.info(f"Phone Service: Saved block screenshot to {screenshot_file}")
+                except:
+                    pass
+                return None
 
             # 3. Find and click the "Show Contact Number" button
             logger.info("Phone Service: Waiting for 'Show Number' button...")

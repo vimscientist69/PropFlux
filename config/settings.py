@@ -14,6 +14,9 @@ class Settings:
     except (ValueError, TypeError):
         DEV_LIMIT = None
     
+    # Headless mode (default to True for production, allow override for debugging)
+    HEADLESS = os.getenv("SCRAPER_HEADLESS", "true").lower() == "true"
+    
     # API Keys & Proxies (Secrets)
     NOPECHA_API_KEY = os.getenv("NOPECHA_API_KEY")
     ROTATING_PROXY_URL = os.getenv("ROTATING_PROXY_URL")
