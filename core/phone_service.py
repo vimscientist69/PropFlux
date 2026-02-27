@@ -24,13 +24,18 @@ from core.rate_limiter import rate_limiter
 from core.user_agents import get_random_ua
 from config.settings import settings
 import random
+import traceback
 
 # Optional selenium-wire for proxy auth
 try:
     from seleniumwire import webdriver as wire_webdriver
     SELENIUM_WIRE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    # Use standard print or a temporary log if loguru isn't ready, 
+    # but here we can just set a flag and log it later in the class or just use logger if it was imported above.
+    # Actually logger is imported on line 15.
     SELENIUM_WIRE_AVAILABLE = False
+    SELENIUM_WIRE_ERROR = str(e)
 
 def _load_phone_config(site_key: str) -> dict:
     """Load phone_retrieval selectors for a given site from sites.yaml."""
@@ -61,6 +66,13 @@ def _get_sessionized_proxy_url(base_proxy_url: str) -> str:
     Injects a unique sessid into the proxy URL for DataImpulse-style sticky sessions.
     Format: http://user__sessid.RANDOM:pass@host:port
     """
+    if not base_proxy_url:
+        return base_proxy_url
+    
+    # Ensure scheme exists for correct parsing
+    if "://" not in base_proxy_url:
+        base_proxy_url = f"http://{base_proxy_url}"
+
     parsed = urlparse(base_proxy_url)
     if not parsed.username:
         return base_proxy_url
@@ -136,7 +148,8 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
         driver = wire_webdriver.Chrome(options=options, seleniumwire_options=seleniumwire_options)
     else:
         if proxy:
-            logger.warning("Proxy configured but selenium-wire not installed. Using direct connection (auth may fail).")
+            error_msg = f": {SELENIUM_WIRE_ERROR}" if 'SELENIUM_WIRE_ERROR' in globals() else ""
+            logger.warning(f"Proxy configured but selenium-wire not available{error_msg}. Using direct connection (auth may fail).")
         driver = webdriver.Chrome(options=options)
     
     # Anti-bot detection: Stealth
@@ -387,6 +400,7 @@ class PhoneService:
             return None
         except Exception as e:
             logger.error(f"Phone Service: Unexpected error at {url}: {e}")
+            logger.error(traceback.format_exc())
             return None
         finally:
             if driver:

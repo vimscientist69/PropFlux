@@ -19,8 +19,10 @@ loguru>=0.7.2
 
 # CAPTCHA solving & browser automation
 nopecha
-selenium>=4.15.0
-selenium-stealth>=1.0.6
-selenium-wire>=5.1.0
+selenium
+selenium-stealth
+selenium-wire
 blinker==1.7.0
+setuptools==80.0.0
+packaging
 chromium

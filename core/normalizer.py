@@ -9,6 +9,13 @@ from loguru import logger
 class Normalizer:
     """Handles data normalization and cleaning."""
     
+    # Common real estate terms for hidden or non-standard pricing
+    NON_NUMERIC_PRICE_TERMS = {
+        'POA', 'PRICE ON APPLICATION', 'PRICE UPON APPLICATION',
+        'AUCTION', 'TENDER', 'NEGOTIABLE', 'OFFERS', 'PRICE ON REQUEST',
+        'FROM', 'REQUEST PRICE', 'TBD', 'TBC'
+    }
+    
     @staticmethod
     def normalize_price(price_str: Any) -> Optional[float]:
         """
@@ -32,8 +39,22 @@ class Normalizer:
             return float(price_str)
         
         try:
+            # First, check if it's a known non-numeric term
+            # Clean up the string for comparison
+            string_val = str(price_str).strip().upper()
+            # Remove punctuation for matching (e.g. "P.O.A." -> "POA")
+            match_val = re.sub(r'[.\-]', '', string_val)
+            
+            if match_val in Normalizer.NON_NUMERIC_PRICE_TERMS:
+                return None
+            
+            # Check if any non-numeric term is contained in the string
+            for term in Normalizer.NON_NUMERIC_PRICE_TERMS:
+                if term in match_val:
+                    return None
+
             # Remove currency symbols and common prefixes
-            cleaned = re.sub(r'[R$€£,\s]', '', str(price_str))
+            cleaned = re.sub(r'[R$€£,\s]', '', string_val)
             
             # Handle M (millions) and K (thousands) suffixes
             if 'M' in cleaned.upper():
@@ -50,6 +71,8 @@ class Normalizer:
             return price
             
         except (ValueError, AttributeError, TypeError) as e:
+            # Only warn if it's not a known status term we should ignore
+            # (Double check in case the regex/loop missed something)
             logger.warning(f"Failed to normalize price '{price_str}': {e}")
             return None
     
