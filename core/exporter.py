@@ -24,19 +24,19 @@ class Exporter:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
     
-    def export_to_csv(self, listings: List[Dict[str, Any]], filename: str = None) -> str:
+    def export_to_csv(self, listings: List[Dict[str, Any]], filename: str = None, append: bool = False) -> str:
         """
         Export listings to CSV file.
         
         Args:
             listings: List of listing dictionaries
             filename: Custom filename (optional)
+            append: Whether to append to existing file
             
         Returns:
             Path to created CSV file
         """
         if not listings:
-            logger.warning("No listings to export to CSV")
             return None
         
         if filename is None:
@@ -62,28 +62,82 @@ class Exporter:
             columns.extend([col for col in df.columns if col not in columns])
             
             df = df[columns]
-            df.to_csv(filepath, index=False, encoding='utf-8')
             
-            logger.info(f"Exported {len(listings)} listings to CSV: {filepath}")
+            # Write mode: 'a' for append, 'w' for write
+            write_mode = 'a' if append else 'w'
+            header = not append or not filepath.exists()
+            
+            df.to_csv(filepath, index=False, mode=write_mode, header=header, encoding='utf-8')
+            
+            logger.debug(f"Exported {len(listings)} listings to CSV (append={append}): {filepath}")
             return str(filepath)
             
         except Exception as e:
             logger.error(f"Failed to export to CSV: {e}")
             raise
     
-    def export_to_json(self, listings: List[Dict[str, Any]], filename: str = None) -> str:
+    def export_to_jsonl(self, listings: List[Dict[str, Any]], filename: str) -> str:
         """
-        Export listings to JSON file.
+        Export listings to JSON Lines file (streaming-friendly).
         
         Args:
             listings: List of listing dictionaries
-            filename: Custom filename (optional)
+            filename: Output filename
             
         Returns:
-            Path to created JSON file
+            Path to JSONL file
         """
         if not listings:
-            logger.warning("No listings to export to JSON")
+            return None
+        
+        filepath = self.output_dir / filename
+        
+        try:
+            with open(filepath, 'a', encoding='utf-8') as f:
+                for item in listings:
+                    f.write(json.dumps(item, ensure_ascii=False) + '\n')
+            
+            logger.debug(f"Appended {len(listings)} listings to JSONL: {filepath}")
+            return str(filepath)
+        except Exception as e:
+            logger.error(f"Failed to export to JSONL: {e}")
+            raise
+
+    def finalize_json_from_jsonl(self, jsonl_filename: str, json_filename: str) -> str:
+        """
+        Read a JSONL file and convert it to a standard formatted JSON array,
+        then delete the JSONL file.
+        """
+        jsonl_path = self.output_dir / jsonl_filename
+        json_path = self.output_dir / json_filename
+        
+        if not jsonl_path.exists():
+            logger.warning(f"JSONL file not found for finalization: {jsonl_path}")
+            return None
+            
+        try:
+            items = []
+            with open(jsonl_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        items.append(json.loads(line))
+            
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(items, f, indent=2, ensure_ascii=False)
+            
+            # Delete intermediate JSONL file
+            jsonl_path.unlink()
+            logger.info(f"Finalized JSON export and cleaned up JSONL: {json_path}")
+            return str(json_path)
+        except Exception as e:
+            logger.error(f"Failed to finalize JSON: {e}")
+            raise
+
+    def export_to_json(self, listings: List[Dict[str, Any]], filename: str = None) -> str:
+        """
+        Export listings to standard JSON file (full write).
+        """
+        if not listings:
             return None
         
         if filename is None:
@@ -96,7 +150,7 @@ class Exporter:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(listings, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"Exported {len(listings)} listings to JSON: {filepath}")
+            logger.debug(f"Exported {len(listings)} listings to JSON: {filepath}")
             return str(filepath)
             
         except Exception as e:
@@ -105,7 +159,8 @@ class Exporter:
     
     def export_to_sqlite(self, listings: List[Dict[str, Any]], 
                         db_name: str = "listings.db",
-                        table_name: str = "listings") -> str:
+                        table_name: str = "listings",
+                        append: bool = True) -> str:
         """
         Export listings to SQLite database.
         
@@ -113,29 +168,28 @@ class Exporter:
             listings: List of listing dictionaries
             db_name: Database filename
             table_name: Table name
+            append: Whether to append or replace
             
         Returns:
             Path to database file
         """
         if not listings:
-            logger.warning("No listings to export to SQLite")
             return None
         
         db_path = self.output_dir / db_name
         
         try:
-            # Use pandas for easier SQLite export
             df = pd.DataFrame(listings)
             
-            # Create connection
             conn = sqlite3.connect(db_path)
             
-            # Write to database (replace if exists)
-            df.to_sql(table_name, conn, if_exists='replace', index=False)
+            # Write to database
+            if_exists = 'append' if append else 'replace'
+            df.to_sql(table_name, conn, if_exists=if_exists, index=False)
             
             conn.close()
             
-            logger.info(f"Exported {len(listings)} listings to SQLite: {db_path}")
+            logger.debug(f"Exported {len(listings)} listings to SQLite (if_exists={if_exists}): {db_path}")
             return str(db_path)
             
         except Exception as e:
@@ -145,17 +199,9 @@ class Exporter:
     def export_all(self, listings: List[Dict[str, Any]], 
                    base_filename: str = None) -> Dict[str, str]:
         """
-        Export to all formats (CSV, JSON, SQLite).
-        
-        Args:
-            listings: List of listing dictionaries
-            base_filename: Base filename (timestamp added automatically)
-            
-        Returns:
-            Dictionary with paths to all created files
+        Standard non-incremental export to all formats.
         """
         if not listings:
-            logger.warning("No listings to export")
             return {}
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -170,8 +216,7 @@ class Exporter:
         results = {
             'csv': self.export_to_csv(listings, csv_name),
             'json': self.export_to_json(listings, json_name),
-            'sqlite': self.export_to_sqlite(listings)
+            'sqlite': self.export_to_sqlite(listings, append=False)
         }
         
-        logger.info(f"Exported to all formats: {results}")
         return results

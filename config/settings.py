@@ -22,6 +22,9 @@ class Settings:
     ROTATING_PROXY_URL = os.getenv("ROTATING_PROXY_URL")
     STICKY_PROXY_URL = os.getenv("STICKY_PROXY_URL")
     
+    # Export Settings
+    EXPORT_BATCH_SIZE = int(os.getenv("SCRAPER_EXPORT_BATCH_SIZE", "100"))
+    
     # Site Constants (Non-secrets)
     PROPERTY24_RECAPTCHA_SITEKEY = "6LcGHUEUAAAAAAfppsl05ypEC9L5KgUG3JYkpoF7"
     
