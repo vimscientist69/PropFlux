@@ -230,7 +230,7 @@ class PhoneService:
         max_retries = kwargs.get('retries', 3)
         for attempt in range(max_retries):
             try:
-                phone = self._get_phone(url=url, site_key='property24')
+                phone = self._get_phone(url=url, site_key='property24', **kwargs)
                 if phone:
                     return phone
                 logger.warning(f"Phone Service: Attempt {attempt + 1} failed for {url}")
@@ -244,7 +244,7 @@ class PhoneService:
                 time.sleep(wait_time)
         return None
 
-    def _get_phone(self, url: str, site_key: str) -> Optional[str]:
+    def _get_phone(self, url: str, site_key: str, **kwargs) -> Optional[str]:
         """Core Selenium logic — navigates to the URL and extracts the phone number."""
         api_key = settings.NOPECHA_API_KEY
         if not api_key:
@@ -269,6 +269,10 @@ class PhoneService:
         ua = get_random_ua()
         proxy_base = settings.STICKY_PROXY_URL
         proxy = _get_sessionized_proxy_url(proxy_base) if proxy_base else None
+        
+        logger.info(f"Phone Service: Preparing driver for {url}")
+        logger.info(f"Phone Service: Using User-Agent: {ua}")
+        logger.info(f"Phone Service: Using Proxy: {proxy if proxy else 'DIRECT'}")
         
         # 1. Create a unique temp directory for this browser instance to avoid profile locking
         temp_dir = tempfile.mkdtemp(prefix="chrome_profile_")

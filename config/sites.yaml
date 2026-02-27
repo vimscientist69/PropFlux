@@ -42,7 +42,7 @@ sites:
     rate_limit:
       delay: 1.0  # seconds between requests
       randomize: true
-      requests_per_minute: 3 
+      requests_per_minute: 5
 
   privateproperty:
     name: "Private Property"

@@ -22,4 +22,5 @@ nopecha
 selenium>=4.15.0
 selenium-stealth>=1.0.6
 selenium-wire>=5.1.0
-selenium-stealth
+blinker==1.7.0
+chromium

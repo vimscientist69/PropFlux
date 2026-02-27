@@ -18,7 +18,7 @@ class UnifiedProxyMiddleware:
         proxy = settings.ROTATING_PROXY_URL
         if proxy:
             request.meta['proxy'] = proxy
-            logger.debug(f"Middleware: Using rotating proxy for {request.url}")
+            logger.info(f"Proxy Middleware: Attaching proxy {proxy} to request: {request.url}")
 
 class UnifiedRateLimitMiddleware:
     """

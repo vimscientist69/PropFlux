@@ -38,14 +38,7 @@ ENV/
 .scrapy/
 
 # Output files
-output/*.csv
-output/*.json
-output/*.db
-output/*.sqlite
-output/*.sqlite3
-output/nopecha_ext
-output/chrome_profile
-
+output/
 
 # Logs
 logs/*.log
