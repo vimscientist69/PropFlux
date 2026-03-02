@@ -4,13 +4,27 @@ PropFlux is a scalable real estate data extraction engine designed for resilient
 
 ## 🎯 Features
 
-- **Multi-site support**: Currently supports Property24 and Private Property (easily extensible)
-- **Robust scraping**: Automatic pagination, retry logic, and error handling
-- **Data normalization**: Standardizes prices, locations, and property details
-- **Deduplication**: Removes duplicate listings based on ID or URL
-- **Multiple export formats**: CSV, JSON, and SQLite database
-- **Configurable**: YAML-based configuration for easy site addition
-- **Production-ready**: Comprehensive logging, caching, and rate limiting
+- **Multi-site support**: Architecture ready for scale, with high-fidelity support for Property24.
+- **Robust scraping**: Automatic pagination, retry logic, and error handling.
+- **Data normalization**: Standardizes prices, locations, and property details.
+- **Deduplication**: Removes duplicate listings based on ID or URL.
+- **Multiple export formats**: CSV, SQLite, and finalized JSON arrays.
+- **Memory-Efficient**: Periodic flushing to disk for large-scale scraping.
+- **Stealth Infrastructure**: Full proxy rotation and anti-bot bypassing (NopeCHA integration).
+
+## 📊 Current Project Status (70% Complete)
+
+PropFlux is currently in advanced development, with the core engine and most complex features fully operational.
+
+### ✅ Completed & Production-Ready
+- **Advanced Anti-Bot Bypassing**: Integrated `selenium-stealth` and NopeCHA for seamless CAPTCHA solving and browser fingerprint masking.
+- **Memory-Optimized Pipeline**: Custom incremental saving system that flushes data to disk in batches, ensuring stability for 100k+ listings.
+- **Intelligent Normalization**: Automated parsing of complex pricing (e.g., "POA", "Negotiable", "Auction") and unit conversion (M/K suffixes).
+- **Stealth Proxy Logic**: Support for sessionized residential proxies with sticky session management to prevent IP blocking.
+- **Streaming Export Engine**: Real-time export to JSONL with final conversion to standard JSON, CSV, and SQLite.
+
+### 🚀 Roadmap (Remaining 30%)
+- **Site Expansion & UI**: Finalizing secondary site spiders and developing a monitoring dashboard for real-time success tracking.
 
 ## 📋 Requirements
 
