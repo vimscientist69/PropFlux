@@ -1,4 +1,4 @@
-# 🏠 Multi-Site Real Estate Scraper (MVP)
+# 🏠 PropFlux (MVP)
 
 ## 🎯 Goal
 

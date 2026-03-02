@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "🏠 Multi-Site Real Estate Scraper - Docker Commands"
+	@echo "🏠 PropFlux - Docker Commands"
 	@echo ""
 	@echo "Available commands:"
 	@echo "  make build              - Build the Docker image"
@@ -18,7 +18,7 @@ help:
 # Build Docker image
 build:
 	@echo "🔨 Building Docker image..."
-	docker build -t real-estate-scraper:latest .
+	docker build -t propflux:latest .
 
 # Run default scraper (Property24)
 run: build
@@ -26,7 +26,7 @@ run: build
 	docker run --rm \
 		-v "$$(pwd)/output:/app/output" \
 		-v "$$(pwd)/logs:/app/logs" \
-		real-estate-scraper:latest --site property24 --verbose
+		propflux:latest --site property24 --verbose
 
 # Run Property24 scraper
 run-property24: build
@@ -34,7 +34,7 @@ run-property24: build
 	docker run --rm \
 		-v "$$(pwd)/output:/app/output" \
 		-v "$$(pwd)/logs:/app/logs" \
-		real-estate-scraper:latest --site property24 --verbose
+		propflux:latest --site property24 --verbose
 
 # Run Private Property scraper
 run-privateproperty: build
@@ -42,7 +42,7 @@ run-privateproperty: build
 	docker run --rm \
 		-v "$$(pwd)/output:/app/output" \
 		-v "$$(pwd)/logs:/app/logs" \
-		real-estate-scraper:latest --site privateproperty --verbose
+		propflux:latest --site privateproperty --verbose
 
 # Run test scrape (limited pages)
 run-test: build
@@ -50,7 +50,7 @@ run-test: build
 	docker run --rm \
 		-v "$$(pwd)/output:/app/output" \
 		-v "$$(pwd)/logs:/app/logs" \
-		real-estate-scraper:latest --site property24 --max-pages 2 --verbose
+		propflux:latest --site property24 --max-pages 2 --verbose
 
 # View logs
 logs:
@@ -64,9 +64,9 @@ shell: build
 		-v "$$(pwd)/output:/app/output" \
 		-v "$$(pwd)/logs:/app/logs" \
 		--entrypoint /bin/bash \
-		real-estate-scraper:latest
+		propflux:latest
 
 # Clean up Docker image
 clean:
 	@echo "🧹 Removing Docker image..."
-	docker rmi real-estate-scraper:latest 2>/dev/null || echo "Image not found."
+	docker rmi propflux:latest 2>/dev/null || echo "Image not found."

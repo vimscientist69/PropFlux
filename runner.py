@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main runner script for the multi-site real estate scraper.
+Main runner script for PropFlux.
 
 Usage:
     python runner.py --site property24
@@ -63,7 +63,7 @@ def setup_logging(verbose: bool = False):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Multi-site real estate scraper",
+        description="PropFlux: Scalable Multi-Site Real Estate Scraper",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

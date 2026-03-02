@@ -1,6 +1,6 @@
-# 🏠 Multi-Site Real Estate Scraper
+# 🏠 PropFlux
 
-A production-ready, scalable web scraping system for extracting structured real estate listings from multiple websites. Built with Scrapy and designed for easy extension to new sites.
+PropFlux is a scalable real estate data extraction engine designed for resilient, multi-site scraping. Built with Scrapy and designed for easy extension to new sites.
 
 ## 🎯 Features
 
