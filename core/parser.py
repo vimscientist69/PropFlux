@@ -102,7 +102,7 @@ class Parser:
         Extract all fields from a listing detail page.
         
         Args:
-            response: Scrapy Response object
+            response: Response object
             
         Returns:
             Dictionary with extracted listing data
@@ -122,65 +122,68 @@ class Parser:
             'agent_name', 'agent_phone', 'listing_id', 'date_posted'
         ]
         
-        # Extract required fields
-        for field in required_fields:
-            selector = self.selectors.get(field)
-            if selector:
-                value = response.css(selector).get()
-                data[field] = value.strip() if value else None
-            else:
-                data[field] = None
-                logger.warning(f"No selector configured for required field: {field}")
-        
-        # Extract optional fields
-        for field in optional_fields:
-            selector = self.selectors.get(field)
-            if selector:
-                value = response.css(selector).get()
-                data[field] = value.strip() if value else None
-            else:
-                data[field] = None
+        try:
+            # Extract both required and optional fields
+            all_fields = required_fields + optional_fields
+            for field in all_fields:
+                selector = self.selectors.get(field)
+                if selector:
+                    value = self.extract_text(response, selector)
+                    data[field] = value
+                    if not value and field in required_fields:
+                        logger.warning(f"Required field '{field}' is empty using selector: {selector}")
+                else:
+                    data[field] = None
+                    if field in required_fields:
+                        logger.warning(f"No selector configured for required field: {field}")
+        except Exception as e:
+            logger.error(f"Failed to parse listing detail: {e}")
+            return None 
         
         return data
-    
-    def is_detail_page(self, response: Response) -> bool:
-        """
-        Check if the current response is a listing detail page.
-        
-        Logic: Returns True if the 'title' selector matches something,
-        but the 'listing_links' or 'listing_container' selectors do not.
-        
-        Args:
-            response: Scrapy Response object
-            
-        Returns:
-            True if it's a detail page, False otherwise
-        """
-        title_selector = self.selectors.get('title')
-        container_selector = self.selectors.get('listing_container')
-        
-        # Must have a title to be a detail page
-        if not title_selector or not response.css(title_selector).get():
-            logger.info(f"No title selector or no title content found from html")
-            return False
-            
-        # If listing_container is present, it's a search page
-        if container_selector and response.css(container_selector):
-            logger.info(f"Container selector present and it is found in html")
-            return False
 
-        return True
-    
     def extract_text(self, response: Response, selector: str) -> Optional[str]:
         """
-        Helper method to extract and clean text from a selector.
+        Extract and clean text from a selector with fallback for nested text.
+        
+        Logic:
+        1. Try the selector as provided.
+        2. If it returns nothing and contains '::text', fall back to extracting 
+           ALL nested text from the element (using XPath string(.)).
         
         Args:
-            response: Scrapy Response object
+            response: Response or Selector object
             selector: CSS selector string
             
         Returns:
             Cleaned text or None
         """
+        # 1. Try provided selector
         value = response.css(selector).get()
+
+        value_empty = (value and not value.strip()) or not value
+
+        # 2. Fallback for nested text if ::text failed
+        if value_empty and "::text" in selector:
+            base_selector = selector.replace("::text", "")
+            # string(.) gets all nested text content concatenated
+            value = response.css(base_selector).xpath("string(.)").get()
+            if value:
+                logger.debug(f"Nested text fallback used for selector '{selector}'")
+                
         return value.strip() if value else None
+    
+    def is_detail_page(self, response: Response) -> bool:
+        """
+        Check if the current response is a listing detail page.
+        """
+        title_selector = self.selectors.get('title')
+        container_selector = self.selectors.get('listing_container')
+        
+        if not title_selector or not response.css(title_selector).get():
+            return False
+            
+        if container_selector and response.css(container_selector):
+            return False
+
+        return True
