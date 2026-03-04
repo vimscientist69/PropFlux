@@ -149,7 +149,7 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     else:
         if proxy:
             error_msg = f": {SELENIUM_WIRE_ERROR}" if 'SELENIUM_WIRE_ERROR' in globals() else ""
-            logger.warning(f"Proxy configured but selenium-wire not available{error_msg}. Using direct connection (auth may fail).")
+            logger.warning(f"Proxy configured but selenium-wire not available: {error_msg}. Using direct connection (auth may fail).")
         driver = webdriver.Chrome(options=options)
     
     # Anti-bot detection: Stealth

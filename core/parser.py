@@ -131,13 +131,13 @@ class Parser:
                     value = self.extract_text(response, selector)
                     data[field] = value
                     if not value and field in required_fields:
-                        logger.warning(f"Required field '{field}' is empty using selector: {selector}")
+                        logger.warning(f"Required field '{field}' is empty using selector: '{selector}' for listing '{response.url}'")
                 else:
                     data[field] = None
                     if field in required_fields:
-                        logger.warning(f"No selector configured for required field: {field}")
+                        logger.warning(f"No selector configured for required field: '{field}' for listing '{response.url}'")
         except Exception as e:
-            logger.error(f"Failed to parse listing detail: {e}")
+            logger.error(f"Failed to parse listing detail: '{e}' for listing '{response.url}'")
             return None 
         
         return data
