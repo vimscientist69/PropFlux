@@ -1,4 +1,5 @@
 from scrapy import signals
+from scrapy.exceptions import IgnoreRequest
 from urllib.parse import urlparse
 from core.rate_limiter import rate_limiter
 from core.user_agents import get_random_ua
@@ -45,3 +46,13 @@ class UnifiedRateLimitMiddleware:
         rate_limiter.wait_for_slot(site_key, rpm)
         
         return None  # Continue normal processing
+
+
+class NotFoundMiddleware:
+    """Drop 404 responses immediately without retrying."""
+
+    def process_response(self, request, response, spider):
+        if response.status == 404:
+            logger.warning(f"Middleware: 404 Not Found — dropping {request.url}")
+            raise IgnoreRequest(f"404 Not Found: {request.url}")
+        return response

@@ -49,6 +49,8 @@ DOWNLOADER_MIDDLEWARES = {
    'scraper.middlewares.RotateUserAgentMiddleware': 50,
    'scraper.middlewares.UnifiedProxyMiddleware': 100,
    'scraper.middlewares.UnifiedRateLimitMiddleware': 150,
+   'scraper.middlewares.NotFoundMiddleware': 200,
+   'scrapy.downloadermiddlewares.retry.RetryMiddleware': 550,
 }
 
 # Enable or disable extensions

@@ -27,6 +27,10 @@ class Settings:
     
     # Concurrency Settings
     MAX_CONCURRENT_BROWSERS = int(os.getenv("SCRAPER_MAX_CONCURRENT_BROWSERS", "2"))
+
+    # Retry Settings (mirrors scraper/settings.py — change both together)
+    RETRY_TIMES = 3
+    RETRY_HTTP_CODES = [500, 502, 503, 504, 408, 429]
     
     # Site Constants (Non-secrets)
     PROPERTY24_RECAPTCHA_SITEKEY = "6LcGHUEUAAAAAAfppsl05ypEC9L5KgUG3JYkpoF7"

@@ -1,12 +1,14 @@
 import time
+import random
 import threading
 from loguru import logger
 from typing import Dict
 
 class RateLimiter:
     """
-    Thread-safe global rate limiter implementing a simple fixed-interval logic.
-    Ensures that for any given domain, requests are spaced out by a minimum interval.
+    Thread-safe global rate limiter with random jitter.
+    Ensures requests to a domain are spaced at least `60/rpm` seconds apart,
+    plus a random jitter of up to 20% of the interval to avoid predictable patterns.
     """
     _instance = None
     _lock = threading.Lock()
@@ -44,7 +46,8 @@ class RateLimiter:
             elapsed = now - last_time
             
             if elapsed < interval:
-                wait_time = interval - elapsed
+                jitter = random.uniform(0, interval * 0.2)
+                wait_time = interval - elapsed + jitter
                 logger.info(f"RateLimiter: Sleeping {wait_time:.2f}s for domain '{domain}'")
                 time.sleep(wait_time)
                 now = time.time()  # Update 'now' after sleeping

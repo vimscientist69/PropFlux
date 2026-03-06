@@ -40,9 +40,7 @@ sites:
       max_pages: 2
     
     rate_limit:
-      delay: 1.0  # seconds between requests
-      randomize: true
-      requests_per_minute: 10
+      requests_per_minute: 15
 
   privateproperty:
     name: "Private Property"
@@ -75,14 +73,4 @@ sites:
       max_pages: 50
     
     rate_limit:
-      delay: 1.0
-      randomize: true
       requests_per_minute: 3
-
-# Global settings
-global:
-  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-  concurrent_requests: 8
-  download_delay: 1
-  retry_times: 3
-  retry_http_codes: [500, 502, 503, 504, 408, 429]

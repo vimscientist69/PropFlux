@@ -244,13 +244,20 @@ class PhoneService:
     def get_property24_phone(self, url: str, **kwargs) -> Optional[str]:
         """
         Navigate to a Property24 listing with retries.
+        Does not retry if the listing is no longer found (e.g. 404 page).
         """
-        max_retries = kwargs.get('retries', 5)
+        # Read retry count from app settings (scraper/settings.py via RETRY_TIMES)
+        max_retries = kwargs.get('retries', getattr(settings, 'RETRY_TIMES', 3))
+
         for attempt in range(max_retries):
             try:
-                phone = self._get_phone(url=url, site_key='property24', **kwargs)
-                if phone:
-                    return phone
+                result = self._get_phone(url=url, site_key='property24', **kwargs)
+                # Sentinel: listing was not found — do not retry
+                if result == 'NOT_FOUND':
+                    logger.warning(f"Phone Service: Listing not found (404), skipping retries for {url}")
+                    return None
+                if result:
+                    return result
                 logger.warning(f"Phone Service: Attempt {attempt + 1} failed for {url}")
             except Exception as e:
                 logger.error(f"Phone Service: Attempt {attempt + 1} crashed: {e}")
@@ -345,8 +352,27 @@ class PhoneService:
                 time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
                 driver.get(url)
 
-                # 3.1 Block Detection
-                if "Server unavailable" in driver.page_source:
+                # 3.1 Block Detection — check the actual HTTP status code via selenium-wire
+                # driver.requests captures all browser HTTP traffic after driver.get()
+                from urllib.parse import urlparse as _urlparse
+                page_src = driver.page_source
+                try:
+                    _parsed = _urlparse(url)
+                    _main_req = next(
+                        (r for r in reversed(driver.requests)
+                         if _parsed.path in r.url and r.response is not None),
+                        None
+                    )
+                    status_code = _main_req.response.status_code if _main_req else None
+                    if status_code == 404:
+                        logger.warning(f"Phone Service: HTTP 404 for {url} — returning NOT_FOUND sentinel")
+                        return 'NOT_FOUND'
+                except Exception as e:
+                    logger.debug(f"Phone Service: Could not read HTTP status code: {e}")
+                    status_code = None
+
+                # 3.2 Block Detection — server block page
+                if "Server unavailable" in page_src:
                     logger.error(f"Phone Service: Blocked! 'Server unavailable' detected at {url}")
                     # Save debug screenshot if blocked
                     try:
