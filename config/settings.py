@@ -25,6 +25,9 @@ class Settings:
     # Export Settings
     EXPORT_BATCH_SIZE = int(os.getenv("SCRAPER_EXPORT_BATCH_SIZE", "100"))
     
+    # Concurrency Settings
+    MAX_CONCURRENT_BROWSERS = int(os.getenv("SCRAPER_MAX_CONCURRENT_BROWSERS", "2"))
+    
     # Site Constants (Non-secrets)
     PROPERTY24_RECAPTCHA_SITEKEY = "6LcGHUEUAAAAAAfppsl05ypEC9L5KgUG3JYkpoF7"
     

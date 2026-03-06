@@ -237,15 +237,15 @@ def setup_chrome_profile() -> None:
 class PhoneService:
     """Retrieves protected phone numbers using a Selenium session with the NopeCHA extension."""
     
-    # Global semaphore to limit concurrent browser instances to 2
+    # Global semaphore to limit concurrent browser instances
     # This prevents Out of Memory (OOM) crashes on local machines.
-    _browser_semaphore = threading.Semaphore(2)
+    _browser_semaphore = threading.Semaphore(settings.MAX_CONCURRENT_BROWSERS)
 
     def get_property24_phone(self, url: str, **kwargs) -> Optional[str]:
         """
         Navigate to a Property24 listing with retries.
         """
-        max_retries = kwargs.get('retries', 3)
+        max_retries = kwargs.get('retries', 5)
         for attempt in range(max_retries):
             try:
                 phone = self._get_phone(url=url, site_key='property24', **kwargs)
