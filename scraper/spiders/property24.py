@@ -54,6 +54,26 @@ class Property24Spider(BaseRealEstateSpider):
         if not item:
             return
 
+        # --- Parsing Enhancements ---
+
+        # 1. Townhouse detection: override property_type if title says "Townhouse"
+        title = item.get('title', '') or ''
+        if 'townhouse' in title.lower():
+            item['property_type'] = 'Townhouse'
+
+        # 2. Location fallback: if agent hid the address, use suburb/city from the card
+        location = item.get('location', '') or ''
+        if 'contact agent' in location.lower():
+            # The 4th child div of .p24_listingCard.p24_listingFeaturesWrapper
+            # contains "Suburb, City" text (e.g. "Constantia, Cape Town")
+            fallback = response.css(
+                '.p24_listingCard.p24_listingFeaturesWrapper > div:nth-child(4)'
+            ).xpath('string(.)').get()
+            if fallback:
+                fallback = ' '.join(fallback.split()).strip()
+            if fallback:
+                item['location'] = fallback
+
         # Guard: Only fetch phone if it's not already in the page's HTML
         if item.get('agent_phone'):
             yield item

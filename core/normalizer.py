@@ -151,9 +151,9 @@ class Normalizer:
         type_mapping = {
             'Apt': 'Apartment',
             'Flat': 'Apartment',
-            'House': 'House',
             'Townhouse': 'Townhouse',
             'Town House': 'Townhouse',
+            'House': 'House',
             'Villa': 'Villa',
             'Penthouse': 'Penthouse',
             'Studio': 'Studio',
