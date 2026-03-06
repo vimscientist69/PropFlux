@@ -25,6 +25,7 @@ from core.user_agents import get_random_ua
 from config.settings import settings
 import random
 import traceback
+import threading
 
 # Optional selenium-wire for proxy auth
 try:
@@ -235,6 +236,10 @@ def setup_chrome_profile() -> None:
 
 class PhoneService:
     """Retrieves protected phone numbers using a Selenium session with the NopeCHA extension."""
+    
+    # Global semaphore to limit concurrent browser instances to 2
+    # This prevents Out of Memory (OOM) crashes on local machines.
+    _browser_semaphore = threading.Semaphore(2)
 
     def get_property24_phone(self, url: str, **kwargs) -> Optional[str]:
         """
@@ -283,132 +288,132 @@ class PhoneService:
         proxy_base = settings.STICKY_PROXY_URL
         proxy = _get_sessionized_proxy_url(proxy_base) if proxy_base else None
         
-        logger.info(f"Phone Service: Preparing driver for {url}")
-        logger.info(f"Phone Service: Using User-Agent: {ua}")
-        logger.info(f"Phone Service: Using Proxy: {proxy if proxy else 'DIRECT'}")
-        
-        # 1. Create a unique temp directory for this browser instance to avoid profile locking
-        temp_dir = tempfile.mkdtemp(prefix="chrome_profile_")
-        source_profile = Path(__file__).parent.parent / "chrome-profiles" / "nopecha-profile"
-        
-        driver = None
-        try:
-            if source_profile.exists():
-                # Copy the Entire profile to our temp folder
-                # We ignore lock files and sockets that causes errors during copying
-                shutil.copytree(
-                    source_profile, 
-                    temp_dir, 
-                    dirs_exist_ok=True,
-                    ignore=shutil.ignore_patterns('Singleton*', 'Lock', 'RunningChromeVersion')
-                )
-                logger.debug(f"Phone Service: Cloned profile to {temp_dir}")
-            else:
-                logger.warning(f"Phone Service: Source profile not found at {source_profile}")
+        # 1. Wait for global rate limit slot BEFORE doing anything expensive
+        # This prevents spawning multiple idle Chrome instances that are just waiting for a slot.
+        _wait_for_rate_limit(site_key)
 
-            # Use global setting for headless, but allow override via kwargs
-            headless = kwargs.get('headless', settings.HEADLESS)
-            driver = _build_driver(ua=ua, proxy=proxy, user_data_dir=temp_dir, headless=headless)
+        with self._browser_semaphore:
+            logger.info(f"Phone Service: Acquired browser slot for {url}")
             
-            # Anti-bot: Verification of Proxy IP
+            # 2. Create a unique temp directory for this browser instance to avoid profile locking
+            temp_dir = tempfile.mkdtemp(prefix="chrome_profile_")
+            source_profile = Path(__file__).parent.parent / "chrome-profiles" / "nopecha-profile"
+            
+            driver = None
             try:
-                driver.get("https://api.ipify.org")
-                logger.info(f"Phone Service: Browser External IP: {driver.find_element(By.TAG_NAME, 'body').text}")
-            except Exception as e:
-                logger.warning(f"Phone Service: Could not verify External IP: {e}")
+                if source_profile.exists():
+                    # Copy the Entire profile to our temp folder
+                    # We ignore lock files and sockets that causes errors during copying
+                    shutil.copytree(
+                        source_profile, 
+                        temp_dir, 
+                        dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns('Singleton*', 'Lock', 'RunningChromeVersion')
+                    )
+                    logger.debug(f"Phone Service: Cloned profile to {temp_dir}")
+                else:
+                    logger.warning(f"Phone Service: Source profile not found at {source_profile}")
 
-            # Stealth: Inject Realistic Headers via Selenium-Wire
-            if hasattr(driver, 'header_overrides'):
-                # Mimic a real Chrome 120+ request with modern security headers
-                driver.header_overrides = {
-                    'Referer': 'https://www.property24.com/',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Sec-Fetch-User': '?1',
-                    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    'Sec-Ch-Ua-Mobile': '?0',
-                    'Sec-Ch-Ua-Platform': '"macOS"',
-                    'Upgrade-Insecure-Requests': '1'
-                }
-
-            # Respect global rate limit across Scrapy and Selenium
-            _wait_for_rate_limit(site_key)
-
-            # 2. Navigate to the listing page
-            logger.info(f"Phone Service: Navigating to {url}")
-            time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
-            driver.get(url)
-
-            # 2.1 Block Detection
-            if "Server unavailable" in driver.page_source:
-                logger.error(f"Phone Service: Blocked! 'Server unavailable' detected at {url}")
-                # Save debug screenshot if blocked
+                # Use global setting for headless, but allow override via kwargs
+                headless = kwargs.get('headless', settings.HEADLESS)
+                driver = _build_driver(ua=ua, proxy=proxy, user_data_dir=temp_dir, headless=headless)
+                
+                # Anti-bot: Verification of Proxy IP
                 try:
-                    debug_path = Path("output/blocks")
-                    debug_path.mkdir(parents=True, exist_ok=True)
-                    screenshot_file = debug_path / f"block_{int(time.time())}.png"
-                    driver.save_screenshot(str(screenshot_file))
-                    logger.info(f"Phone Service: Saved block screenshot to {screenshot_file}")
-                except:
-                    pass
+                    driver.get("https://api.ipify.org")
+                    logger.info(f"Phone Service: Browser External IP: {driver.find_element(By.TAG_NAME, 'body').text}")
+                except Exception as e:
+                    logger.warning(f"Phone Service: Could not verify External IP: {e}")
+
+                # Stealth: Inject Realistic Headers via Selenium-Wire
+                if hasattr(driver, 'header_overrides'):
+                    # Mimic a real Chrome 120+ request with modern security headers
+                    driver.header_overrides = {
+                        'Referer': 'https://www.property24.com/',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'Sec-Fetch-User': '?1',
+                        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                        'Sec-Ch-Ua-Mobile': '?0',
+                        'Sec-Ch-Ua-Platform': '"macOS"',
+                        'Upgrade-Insecure-Requests': '1'
+                    }
+                
+                # 3. Navigate to the listing page
+                logger.info(f"Phone Service: Navigating to {url}")
+                time.sleep(random.uniform(1.0, 2.5))  # Random jitter before navigation
+                driver.get(url)
+
+                # 3.1 Block Detection
+                if "Server unavailable" in driver.page_source:
+                    logger.error(f"Phone Service: Blocked! 'Server unavailable' detected at {url}")
+                    # Save debug screenshot if blocked
+                    try:
+                        debug_path = Path("output/blocks")
+                        debug_path.mkdir(parents=True, exist_ok=True)
+                        screenshot_file = debug_path / f"block_{int(time.time())}.png"
+                        driver.save_screenshot(str(screenshot_file))
+                        logger.info(f"Phone Service: Saved block screenshot to {screenshot_file}")
+                    except:
+                        pass
+                    return None
+
+                # 4. Find and click the "Show Contact Number" button
+                logger.info("Phone Service: Waiting for 'Show Number' button...")
+                wait = WebDriverWait(driver, 200)
+
+                logger.info("Phone Service: Clicking 'Show Number' button...")
+
+                show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
+                show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
+
+                # 4.1 Human-like scrolling
+                _human_scroll(driver, show_btn)
+                time.sleep(random.uniform(0.8, 1.5))
+                
+                # 4.2 Human-like mouse movements
+                actions = ActionChains(driver)
+                
+                # Hover with a bit of "jitter"
+                actions.move_to_element_with_offset(show_btn, random.randint(-5, 5), random.randint(-5, 5))
+                actions.pause(random.uniform(0.5, 1.2))
+                
+                # Click with slight offset
+                actions.click_and_hold(show_btn)
+                actions.pause(random.uniform(0.1, 0.2)) # Brief hold
+                actions.release()
+                actions.perform()
+
+                # 5. Wait for the phone number (NopeCHA auto-solves the CAPTCHA)
+                logger.info("Phone Service: Waiting for phone number (NopeCHA will auto-solve CAPTCHA)...")
+                phone_el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, phone_result_sel)))
+                phone = phone_el.text.strip()
+
+                if phone:
+                    logger.success(f"Phone Service: Got phone number: {phone}")
+                    return phone
+
+                logger.warning("Phone Service: Phone element visible but text was empty")
                 return None
 
-            # 3. Find and click the "Show Contact Number" button
-            logger.info("Phone Service: Waiting for 'Show Number' button...")
-            wait = WebDriverWait(driver, 200)
-
-            logger.info("Phone Service: Clicking 'Show Number' button...")
-
-            show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
-            show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
-
-            # 3.1 Human-like scrolling
-            _human_scroll(driver, show_btn)
-            time.sleep(random.uniform(0.8, 1.5))
-            
-            # 3.2 Human-like mouse movements
-            actions = ActionChains(driver)
-            
-            # Hover with a bit of "jitter"
-            actions.move_to_element_with_offset(show_btn, random.randint(-5, 5), random.randint(-5, 5))
-            actions.pause(random.uniform(0.5, 1.2))
-            
-            # Click with slight offset
-            actions.click_and_hold(show_btn)
-            actions.pause(random.uniform(0.1, 0.2)) # Brief hold
-            actions.release()
-            actions.perform()
-
-            # 4. Wait for the phone number (NopeCHA auto-solves the CAPTCHA)
-            logger.info("Phone Service: Waiting for phone number (NopeCHA will auto-solve CAPTCHA)...")
-            phone_el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, phone_result_sel)))
-            phone = phone_el.text.strip()
-
-            if phone:
-                logger.success(f"Phone Service: Got phone number: {phone}")
-                return phone
-
-            logger.warning("Phone Service: Phone element visible but text was empty")
-            return None
-
-        except (TimeoutException, WebDriverException) as e:
-            logger.error(f"Phone Service: Driver error at {url}: {e}")
-            return None
-        except NoSuchElementException as e:
-            logger.error(f"Phone Service: Element not found at {url}: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Phone Service: Unexpected error at {url}: {e}")
-            logger.error(traceback.format_exc())
-            return None
-        finally:
-            if driver:
-                driver.quit()
-            # 2. Cleanup the temporary profile directory
-            try:
-                shutil.rmtree(temp_dir)
-                logger.debug(f"Phone Service: Cleaned up temp profile {temp_dir}")
-            except Exception as cleanup_err:
-                logger.warning(f"Phone Service: Failed to cleanup temp profile: {cleanup_err}")
-            logger.info(f"Phone Service: Driver closed for {url}")
+            except (TimeoutException, WebDriverException) as e:
+                logger.error(f"Phone Service: Driver error at {url}: {e}")
+                return None
+            except NoSuchElementException as e:
+                logger.error(f"Phone Service: Element not found at {url}: {e}")
+                return None
+            except Exception as e:
+                logger.error(f"Phone Service: Unexpected error at {url}: {e}")
+                logger.error(traceback.format_exc())
+                return None
+            finally:
+                if driver:
+                    driver.quit()
+                # 6. Cleanup the temporary profile directory
+                try:
+                    shutil.rmtree(temp_dir)
+                    logger.debug(f"Phone Service: Cleaned up temp profile {temp_dir}")
+                except Exception as cleanup_err:
+                    logger.warning(f"Phone Service: Failed to cleanup temp profile: {cleanup_err}")
+                logger.info(f"Phone Service: Driver closed and slot released for {url}")

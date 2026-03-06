@@ -37,7 +37,7 @@ sites:
       type: "pattern"
       url_template: "{base_url}/p{page}"
       total_pages_selector: ".pagination li:last-child a::attr(data-pagenumber)"
-      max_pages: 1
+      max_pages: 2
     
     rate_limit:
       delay: 1.0  # seconds between requests
