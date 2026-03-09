@@ -45,7 +45,7 @@ sites:
       type: "pattern"
       url_template: "{base_url}/p{page}"
       total_pages_selector: ".pagination li:last-child a::attr(data-pagenumber)"
-      max_pages: 1
+      max_pages: 30 
     
     rate_limit:
       requests_per_minute: 15
@@ -54,31 +54,35 @@ sites:
     name: "Private Property"
     base_url: "https://www.privateproperty.co.za"
     start_urls:
-      - "https://www.privateproperty.co.za/for-sale"
+      - "https://www.privateproperty.co.za/for-sale/south-africa/1"
     
     selectors:
       # Listing page selectors
-      listing_links: ".listing-result a.listing-result-link::attr(href)"
+      listing_container: ".featured-listing, .listing-result"
+      listing_links: "a::attr(href)"
       next_page: ".pagination .next::attr(href)"
       
       # Detail page selectors
-      title: "h1.listing-title::text"
-      price: ".listing-price::text"
-      location: ".listing-location::text"
-      bedrooms: ".icon-bed + span::text"
-      bathrooms: ".icon-bath + span::text"
-      property_type: ".property-type::text"
-      description: ".listing-description::text"
-      agent_name: ".agent-name::text"
-      agent_phone: ".agent-phone::text"
-      listing_id: ".listing-reference::text"
-      date_posted: ".listing-date::text"
+      title: ".listing-details__title::text"
+      price: ".listing-price-display__price::text"
+      location: ".listing-details__address::text"
+      bedrooms: "[title='Bedrooms']::text"
+      bathrooms: "[title='Bathrooms']::text"
+      property_type: "li:contains('Property type') .property-details__value::text"
+      description: ".listing-description__text"
+      agent_name: "[alt^='Photo of']::attr(alt)"
+      listing_id: "li:contains('Listing number') .property-details__value::text"
+      date_posted: "li:contains('Listing date') .property-details__value::text"
+      erf_size: "[title='Land size']::text"
+      rates_and_taxes: "li:contains('Rates and taxes') .property-details__value::text"
+      levies: "li:contains('Levies') .property-details__value::text"
+      garages: "[title='Parking spaces']::text"
     
     pagination:
       type: "pattern"
       url_template: "{base_url}?page={page}"
       total_pages_selector: ".pagination a:nth-last-child(2)::text"
-      max_pages: 1
+      max_pages: 30
     
     rate_limit:
-      requests_per_minute: 3
+      requests_per_minute: 5
