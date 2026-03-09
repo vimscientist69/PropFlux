@@ -7,8 +7,8 @@ from typing import Dict
 class RateLimiter:
     """
     Thread-safe global rate limiter with random jitter.
-    Ensures requests to a domain are spaced at least `60/rpm` seconds apart,
-    plus a random jitter of up to 20% of the interval to avoid predictable patterns.
+    Ensures requests to a domain are spaced based on `60/rpm` seconds,
+    randomized within a +/- 15% range to avoid predictable patterns.
     """
     _instance = None
     _lock = threading.Lock()
@@ -32,7 +32,7 @@ class RateLimiter:
         if requests_per_minute <= 0:
             return
 
-        interval = 60.0 / requests_per_minute
+        base_interval = 60.0 / requests_per_minute
         
         # Get or create a lock for this specific domain
         with self._lock:
@@ -41,14 +41,17 @@ class RateLimiter:
             domain_lock = self._domain_locks[domain]
 
         with domain_lock:
+            # Create a randomized target interval for this specific request
+            # e.g., if RPM=15 (4s interval), range is 3.4s to 4.6s
+            target_interval = base_interval * random.uniform(0.85, 1.15)
+            
             now = time.time()
             last_time = self._last_request_time.get(domain, 0)
             elapsed = now - last_time
             
-            if elapsed < interval:
-                jitter = random.uniform(0, interval * 0.2)
-                wait_time = interval - elapsed + jitter
-                logger.info(f"RateLimiter: Sleeping {wait_time:.2f}s for domain '{domain}'")
+            if elapsed < target_interval:
+                wait_time = target_interval - elapsed
+                logger.info(f"RateLimiter: Sleeping {wait_time:.2f}s for domain '{domain}' (Target: {target_interval:.2f}s)")
                 time.sleep(wait_time)
                 now = time.time()  # Update 'now' after sleeping
             
