@@ -24,6 +24,14 @@ sites:
       agent_phone: ".p24_agentPhone::text"
       listing_id: ".p24_propertyOverviewRow:contains('Listing Number') .p24_info::text"
       date_posted: ".p24_propertyOverviewRow:contains('Listing Date') .p24_info::text"
+      erf_size: ".p24_propertyOverviewRow:contains('Erf Size') .p24_info::text"
+      floor_size: ".p24_propertyOverviewRow:contains('Floor Size') .p24_info::text"
+      rates_and_taxes: ".p24_propertyOverviewRow:contains('Rates and Taxes') .p24_info::text"
+      garages: ".p24_propertyOverviewRow:contains('Garage') .p24_info::text"
+      parking: ".p24_propertyOverviewRow:contains('Parking') .p24_info::text"
+      backup_power: ".p24_propertyOverviewRow:contains('Backup Power') .p24_info::text"
+      security: ".p24_propertyOverviewRow:contains('Security') .p24_info::text"
+      pets_allowed: ".p24_propertyOverviewRow:contains('Pets Allowed') .p24_info::text"
       
       # Hidden selectors for phone retrieval API
       agent_profile_url: ".p24_agentPhoto a::attr(href)"

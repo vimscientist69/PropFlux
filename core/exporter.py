@@ -216,7 +216,7 @@ class Exporter:
         results = {
             'csv': self.export_to_csv(listings, csv_name),
             'json': self.export_to_json(listings, json_name),
-            'sqlite': self.export_to_sqlite(listings, append=False)
+            # 'sqlite': self.export_to_sqlite(listings, append=False)
         }
         
         return results

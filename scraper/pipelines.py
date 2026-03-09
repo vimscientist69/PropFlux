@@ -110,7 +110,7 @@ class ExportPipeline:
         self.exporter.export_to_jsonl(self.items, filename=self.jsonl_file)
         
         # 3. Append to SQLite
-        self.exporter.export_to_sqlite(self.items, append=True)
+        # self.exporter.export_to_sqlite(self.items, append=True)
         
         # 4. Clear memory
         self.items = []

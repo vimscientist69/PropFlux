@@ -119,7 +119,9 @@ class Parser:
         
         # Optional fields
         optional_fields = [
-            'agent_name', 'agent_phone', 'listing_id', 'date_posted'
+            'agent_name', 'agent_phone', 'listing_id', 'date_posted',
+            'erf_size', 'floor_size', 'rates_and_taxes', 'garages', 
+            'parking', 'backup_power', 'security', 'pets_allowed'
         ]
 
         # Initialize Data Quality flags (normalized later)
@@ -149,31 +151,37 @@ class Parser:
     def extract_text(self, response: Response, selector: str) -> Optional[str]:
         """
         Extract and clean text from a selector with fallback for nested text.
+        Supports both CSS and XPath (if selector starts with '/').
         
         Logic:
-        1. Try the selector as provided.
-        2. If it returns nothing and contains '::text', fall back to extracting 
+        1. If selector starts with '/', treat as XPath.
+        2. Else, try the selector as CSS.
+        3. If CSS returns nothing and contains '::text', fall back to extracting 
            ALL nested text from the element (using XPath string(.)).
         
         Args:
             response: Response or Selector object
-            selector: CSS selector string
+            selector: CSS or XPath selector string
             
         Returns:
             Cleaned text or None
         """
-        # 1. Try provided selector
-        value = response.css(selector).get()
+        # 1. Handle XPath
+        if selector.startswith('/'):
+            value = response.xpath(selector).get()
+        else:
+            # 2. Try provided CSS selector
+            value = response.css(selector).get()
 
-        value_empty = (value and not value.strip()) or not value
+            value_empty = (value and not value.strip()) or not value
 
-        # 2. Fallback for nested text if ::text failed
-        if value_empty and "::text" in selector:
-            base_selector = selector.replace("::text", "")
-            # string(.) gets all nested text content concatenated
-            value = response.css(base_selector).xpath("string(.)").get()
-            if value:
-                logger.debug(f"Nested text fallback used for selector '{selector}'")
+            # 3. Fallback for nested text if ::text failed
+            if value_empty and "::text" in selector:
+                base_selector = selector.replace("::text", "")
+                # string(.) gets all nested text content concatenated
+                value = response.css(base_selector).xpath("string(.)").get()
+                if value:
+                    logger.debug(f"Nested text fallback used for selector '{selector}'")
                 
         return value.strip() if value else None
     

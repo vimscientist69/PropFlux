@@ -125,12 +125,50 @@ class Normalizer:
         
         try:
             # Extract first number found (including decimals)
+            # Use raw string for regex
             match = re.search(r'\d+(\.\d+)?', str(value_str))
             if match:
                 return float(match.group())
             return None
         except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Failed to normalize numeric '{value_str}': {e}")
+            return None
+
+    @staticmethod
+    def normalize_area(area_str: Any) -> Optional[float]:
+        """
+        Normalize area strings (e.g., erf size, floor size) to float in square meters.
+        
+        Examples:
+            "1 626 m²" -> 1626.0
+            "585 m²" -> 585.0
+            "0.5 ha" -> 5000.0
+        """
+        if not area_str:
+            return None
+            
+        if isinstance(area_str, (int, float)):
+            return float(area_str)
+            
+        try:
+            val_str = str(area_str).lower().replace('\xa0', ' ').replace(',', '.')
+            # Extract number
+            match = re.search(r'([\d\s.]+)', val_str)
+            if not match:
+                return None
+                
+            num_part = match.group(1).replace(' ', '')
+            value = float(num_part)
+            
+            # Handle units
+            if 'ha' in val_str:
+                value *= 10000
+            elif 'acre' in val_str:
+                value *= 4046.86
+                
+            return value
+        except Exception as e:
+            logger.warning(f"Failed to normalize area '{area_str}': {e}")
             return None
 
     @staticmethod
@@ -235,13 +273,25 @@ class Normalizer:
         if 'location' in normalized:
             normalized['location'] = Normalizer.normalize_location(normalized['location'])
         
-        # Normalize bedrooms/bathrooms (float support)
-        if 'bedrooms' in normalized:
-            normalized['bedrooms'] = Normalizer.normalize_numeric(normalized['bedrooms'])
+        # Normalize numeric fields (float support)
+        for num_field in ['bedrooms', 'bathrooms', 'garages', 'parking']:
+            if num_field in normalized:
+                normalized[num_field] = Normalizer.normalize_numeric(normalized[num_field])
         
-        if 'bathrooms' in normalized:
-            normalized['bathrooms'] = Normalizer.normalize_numeric(normalized['bathrooms'])
-        
+        # Normalize area fields
+        for area_field in ['erf_size', 'floor_size']:
+            if area_field in normalized:
+                normalized[area_field] = Normalizer.normalize_area(normalized[area_field])
+
+        # Normalize currency-like fields
+        if 'rates_and_taxes' in normalized:
+            normalized['rates_and_taxes'] = Normalizer.normalize_price(normalized['rates_and_taxes'])
+
+        # Normalize booleans/strings
+        for bool_field in ['backup_power', 'security', 'pets_allowed']:
+            if bool_field in normalized and normalized[bool_field]:
+                normalized[bool_field] = ' '.join(str(normalized[bool_field]).split())
+
         # Normalize property type
         if 'property_type' in normalized:
             normalized['property_type'] = Normalizer.normalize_property_type(normalized['property_type'])
