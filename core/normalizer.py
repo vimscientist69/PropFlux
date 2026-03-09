@@ -2,6 +2,8 @@
 Normalizer module for cleaning and standardizing extracted data.
 """
 import re
+import dateparser
+from datetime import datetime
 from typing import Dict, Any, Optional
 from loguru import logger
 
@@ -99,36 +101,59 @@ class Normalizer:
         return cleaned if cleaned else None
     
     @staticmethod
-    def normalize_integer(value_str: Any) -> Optional[int]:
+    def normalize_numeric(value_str: Any) -> Optional[float]:
         """
-        Extract integer from string (for bedrooms, bathrooms, etc.).
+        Extract numeric value from string (for bedrooms, bathrooms, etc.).
+        Supports decimals (e.g., "0.5" for studios).
         
         Examples:
-            "3 Bedrooms" -> 3
-            "2.5" -> 2
-            "Two" -> None (text numbers not supported yet)
+            "3 Bedrooms" -> 3.0
+            "0.5" -> 0.5
+            "1.5 Bathrooms" -> 1.5
         
         Args:
             value_str: Raw string containing number or already normalized numeric value
             
         Returns:
-            Integer value or None
+            Float value or None
         """
         if value_str is None:
             return None
             
         if isinstance(value_str, (int, float)):
-            return int(value_str)
+            return float(value_str)
         
         try:
-            # Extract first number found
-            match = re.search(r'\d+', str(value_str))
+            # Extract first number found (including decimals)
+            match = re.search(r'\d+(\.\d+)?', str(value_str))
             if match:
-                return int(match.group())
+                return float(match.group())
             return None
         except (ValueError, AttributeError, TypeError) as e:
-            logger.warning(f"Failed to normalize integer '{value_str}': {e}")
+            logger.warning(f"Failed to normalize numeric '{value_str}': {e}")
             return None
+
+    @staticmethod
+    def normalize_date(date_str: Any) -> Optional[str]:
+        """
+        Normalize date string to ISO format YYYY-MM-DD.
+        
+        Examples:
+            "10 February 2026" -> "2026-02-10"
+            "2026/03/01" -> "2026-03-01"
+        """
+        if not date_str:
+            return None
+            
+        try:
+            # Use dateparser to handle various natural language formats
+            dt = dateparser.parse(str(date_str))
+            if dt:
+                return dt.strftime('%Y-%m-%d')
+            return str(date_str)
+        except Exception as e:
+            logger.warning(f"Failed to normalize date '{date_str}': {e}")
+            return str(date_str)
     
     @staticmethod
     def normalize_property_type(prop_type: Optional[str]) -> Optional[str]:
@@ -179,6 +204,29 @@ class Normalizer:
         """
         normalized = listing.copy()
         
+        # Initialize flags if missing
+        if 'is_auction' not in normalized:
+            normalized['is_auction'] = False
+        if 'is_private_seller' not in normalized:
+            normalized['is_private_seller'] = False
+
+        # 1. Auction Detection
+        # Check title and price for auction keywords
+        title_text = str(normalized.get('title', '')).upper()
+        price_text = str(normalized.get('price', '')).upper()
+        if 'AUCTION' in title_text or 'AUCTION' in price_text:
+            normalized['is_auction'] = True
+
+        # 2. Private Seller Detection & Agent Cleaning
+        agent_name = normalized.get('agent_name')
+        if agent_name:
+            agent_name_clean = str(agent_name).strip()
+            if agent_name_clean.upper() == "SELLER":
+                normalized['is_private_seller'] = True
+                normalized['agent_name'] = None
+            else:
+                normalized['agent_name'] = ' '.join(agent_name_clean.split())
+
         # Normalize price
         if 'price' in normalized:
             normalized['price'] = Normalizer.normalize_price(normalized['price'])
@@ -187,20 +235,23 @@ class Normalizer:
         if 'location' in normalized:
             normalized['location'] = Normalizer.normalize_location(normalized['location'])
         
-        # Normalize bedrooms
+        # Normalize bedrooms/bathrooms (float support)
         if 'bedrooms' in normalized:
-            normalized['bedrooms'] = Normalizer.normalize_integer(normalized['bedrooms'])
+            normalized['bedrooms'] = Normalizer.normalize_numeric(normalized['bedrooms'])
         
-        # Normalize bathrooms
         if 'bathrooms' in normalized:
-            normalized['bathrooms'] = Normalizer.normalize_integer(normalized['bathrooms'])
+            normalized['bathrooms'] = Normalizer.normalize_numeric(normalized['bathrooms'])
         
         # Normalize property type
         if 'property_type' in normalized:
             normalized['property_type'] = Normalizer.normalize_property_type(normalized['property_type'])
+            
+        # Normalize date
+        if 'date_posted' in normalized:
+            normalized['date_posted'] = Normalizer.normalize_date(normalized['date_posted'])
         
-        # Clean text fields (title, description)
-        for field in ['title', 'description', 'agent_name']:
+        # Clean title and description
+        for field in ['title', 'description']:
             if field in normalized and normalized[field]:
                 normalized[field] = ' '.join(str(normalized[field]).split())
         

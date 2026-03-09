@@ -121,6 +121,10 @@ class Parser:
         optional_fields = [
             'agent_name', 'agent_phone', 'listing_id', 'date_posted'
         ]
+
+        # Initialize Data Quality flags (normalized later)
+        data['is_auction'] = False
+        data['is_private_seller'] = False
         
         try:
             # Extract both required and optional fields
