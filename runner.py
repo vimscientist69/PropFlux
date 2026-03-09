@@ -28,11 +28,12 @@ SPIDER_MAP = {
 }
 
 
-def setup_logging(verbose: bool = False):
+def setup_logging(site_name: str = "general", verbose: bool = False):
     """
     Configure logging.
     
     Args:
+        site_name: Name of the site being scraped
         verbose: Enable verbose logging
     """
     log_level = "DEBUG" if verbose else "INFO"
@@ -52,8 +53,8 @@ def setup_logging(verbose: bool = False):
     log_dir.mkdir(exist_ok=True)
     
     logger.add(
-        log_dir / "scraper_{time:YYYY-MM-DD}.log",
-        rotation="1 day",
+        log_dir / f"{site_name}_{{time:YYYYMMDD_HHmmss}}.log",
+        rotation="100 MB",
         retention="7 days",
         level=log_level,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
@@ -107,6 +108,12 @@ Examples:
         help='Enable verbose logging'
     )
     
+    parser.add_argument(
+        '--limit',
+        type=int,
+        help='Hard limit for total number of listings to scrape (overrides max-pages and dev-limit)'
+    )
+    
     args = parser.parse_args()
 
     # Handle one-time Chrome profile setup
@@ -118,7 +125,7 @@ Examples:
         parser.error('--site is required unless --setup-chrome-profile is used')
 
     # Setup logging
-    setup_logging(args.verbose)
+    setup_logging(args.site, args.verbose)
     
     # Get spider class
     spider_class = SPIDER_MAP[args.site]
@@ -144,6 +151,10 @@ Examples:
     if args.max_pages:
         spider_kwargs['max_pages'] = args.max_pages
         logger.info(f"Max pages set to: {args.max_pages}")
+    
+    if args.limit:
+        spider_kwargs['limit'] = args.limit
+        logger.info(f"Hard limit set to: {args.limit} listings")
     
     # Start crawling
     process.crawl(spider_class, **spider_kwargs)

@@ -67,7 +67,14 @@ python runner.py --site property24 --max-pages 5
 
 # Verbose logging
 python runner.py --site property24 --verbose
+
+# Verbose logging
+python runner.py --site property24 --verbose
+
+# Hard limit total listings (overrides max-pages and dev-limit)
+python runner.py --site property24 --limit 50
 ```
+
 
 ## 📞 Phone Number Retrieval (NopeCHA CAPTCHA Solver)
 

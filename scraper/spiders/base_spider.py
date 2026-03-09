@@ -36,15 +36,23 @@ class BaseRealEstateSpider(scrapy.Spider):
         if not self.start_urls:
             self.start_urls = self.site_config.get('start_urls', [])
         
-        # Pagination settings
         self.pagination_config = self.site_config.get('pagination', {})
         self.max_pages = self.pagination_config.get('max_pages', 50)
+        
         self.current_page = 0
         self.total_pages = None
+        self.items_requested = 0
         
-        # Development limits
-        self.dev_limit = settings.DEV_LIMIT
-        
+        # Hard limit from runner
+        self.limit = kwargs.get('limit')
+        if self.limit:
+            # If hard limit is set, we ignore max_pages and dev_limit
+            self.max_pages = 999999
+            self.dev_limit = None
+            logger.info(f"Hard limit of {self.limit} items enabled. Overriding page/dev limits.")
+        else:
+            self.dev_limit = settings.DEV_LIMIT
+
         logger.info(f"Initialized {self.name} spider for {self.site_key}")
     
     def _load_config(self) -> Dict[str, Any]:
@@ -79,7 +87,8 @@ class BaseRealEstateSpider(scrapy.Spider):
         """
         if self.total_pages is None:
             self.total_pages = self.parser.parse_total_pages(self.pagination_config, response)
-            logger.info(f"Total pages found: {self.total_pages}")
+            if self.total_pages:
+                logger.info(f"Total pages found: {self.total_pages}")
         
         next_page_num = self.current_page + 1
         
@@ -133,22 +142,35 @@ class BaseRealEstateSpider(scrapy.Spider):
             logger.info(f"Dev limit: only processing first {len(listing_links)} links")
         
         # Follow each listing link
+        # Follow each listing link up to the limit
         for link in listing_links:
+            if self.limit and self.items_requested >= self.limit:
+                logger.info(f"Hard limit of {self.limit} requests reached. Stopping.")
+                return # Stop processing this page and don't look for more
+                
+            self.items_requested += 1
+            
             yield scrapy.Request(
                 url=link,
                 callback=self.parse_listing,
                 errback=self.handle_error
             )
         
+        # Pagination
         next_page = self.get_next_page_url(response)
         if next_page:
-            logger.info(f"Following next page: {next_page}")
+            # Check hard limit before continuing to next page
+            if self.limit and self.items_requested >= self.limit:
+                logger.info(f"Hard limit of {self.limit} reached. Not requesting next page.")
+                return
+            
+            logger.debug(f"Following next page: {next_page}")
             yield scrapy.Request(
-                url=next_page,
-                callback=self.parse,
-                errback=self.handle_error,
-                meta={'search_base_url': response.meta.get('search_base_url')}
-            )
+                    url=next_page,
+                    callback=self.parse,
+                    errback=self.handle_error,
+                    meta={'search_base_url': response.meta.get('search_base_url')}
+                )
     
     async def parse_listing(self, response: Response) -> Generator:
         """
@@ -160,6 +182,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         Yields:
             Normalized listing data
         """
+        # No need for limit check here as it's handled in the discovery loop (parse)
         logger.debug(f"Parsing listing: {response.url}")
         
         # Extract raw data
