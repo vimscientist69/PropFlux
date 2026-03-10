@@ -138,7 +138,6 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     options.add_argument('--disable-software-rasterizer')
     options.add_argument('--disable-extensions')
     options.add_argument('--mute-audio')
-    # options.page_load_strategy = 'eager' # Faster loads
     
     if headless:
         options.add_argument("--headless=new")

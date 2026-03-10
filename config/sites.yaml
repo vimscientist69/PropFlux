@@ -45,10 +45,10 @@ sites:
       type: "pattern"
       url_template: "{base_url}/p{page}"
       total_pages_selector: ".pagination li:last-child a::attr(data-pagenumber)"
-      max_pages: 30 
+      max_pages: 30
     
     rate_limit:
-      requests_per_minute: 15
+      requests_per_minute: 35
 
   privateproperty:
     name: "Private Property"
