@@ -124,17 +124,26 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     
     if ua:
         options.add_argument(f'--user-agent={ua}')
-    
+ 
     options.add_argument('--disable-infobars')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    
+    # --- New Compute Optimization Arguments ---
+    options.add_argument('--blink-settings=imagesEnabled=false') # Block images
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-software-rasterizer')
+    options.add_argument('--disable-extensions')
+    options.add_argument('--mute-audio')
+    # options.page_load_strategy = 'eager' # Faster loads
+    
     if headless:
         options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080") # Set common desktop resolution
-
+    options.add_argument("--window-size=1920,1080")
+ 
     seleniumwire_options = {}
     if proxy:
         seleniumwire_options = {
