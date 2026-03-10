@@ -23,6 +23,23 @@ The PropFlux Admin System is a full-stack, comprehensive web application built t
 
 ---
 
+## 🎨 UI/UX Design Guidelines (The "Portfolio" Look)
+
+To guarantee this project stands out to potential clients, the frontend must move away from generic bootstrap designs and adopt a **modern, clean, and highly professional aesthetic**. 
+
+### Recommended UI Libraries
+*   **Core Components:** **shadcn/ui** (Built on Tailwind CSS and Radix UI). It provides beautifully designed, accessible components (dropdowns, sliders, data tables) that look custom-built rather than "off-the-shelf" like older Material UI implementations.
+*   **Styling Engine:** **Tailwind CSS**. Allows for rapid, consistent styling with a focus on a "glassmorphism" or sleek dark-mode aesthetic.
+*   **Data Visualization:** **Tremor (tremor.so)** or **Recharts**. Tremor is specifically designed for building stunning, modern admin dashboards and integrates perfectly with Tailwind and React.
+
+### Aesthetic Principles
+1.  **Minimalistic Hierarchy:** Let the data breathe. Use generous padding, subtle borders (or borderless cards with soft drop-shadows), and a restricted color palette.
+2.  **Dark Mode First (Optional but Recommended):** A sleek, slate/zinc dark mode (ex: `bg-zinc-950` with `border-zinc-800` borders) immediately signals a modern "developer-tool" or "command-center" vibe.
+3.  **Accent Colors:** Use a single, vibrant accent color (like a neon indigo or emerald green) exclusively for active states, running progress bars, or "Run Job" primary buttons.
+4.  **Micro-Interactions:** Buttons should have subtle hover states; logs should scroll smoothly; status indicators should softly pulse when a job is `[LIVE]`.
+
+---
+
 ## ⚙️ The Admin Control Panel (Capabilities)
 
 The dashboard is not just for viewing; it's the control center. The frontend will allow users to dynamically configure the following parameters before launching a scrape job:
