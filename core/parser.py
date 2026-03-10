@@ -109,6 +109,9 @@ class Parser:
         """
         data = {
             'listing_url': response.url,
+            'suburb': None,
+            'city': None,
+            'province': None
         }
         
         # Required fields
@@ -135,6 +138,7 @@ class Parser:
                 selector = self.selectors.get(field)
                 if selector:
                     value = self.extract_text(response, selector)
+
                     data[field] = value
                     if not value and field in required_fields:
                         logger.warning(f"Required field '{field}' is empty using selector: '{selector}' for listing '{response.url}'")

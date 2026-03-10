@@ -56,14 +56,40 @@ class Property24Spider(BaseRealEstateSpider):
 
         # --- Parsing Enhancements ---
 
-        # 1. Townhouse detection: override property_type if title says "Townhouse"
+        # 1. Location Hierarchy (Suburb, City, Province) from URL
+        # e.g., /for-sale/<suburb>/<city>/<province>/<area_id>/<listing_id>
+        try:
+            url_parts = response.url.split('/')
+            if 'for-sale' in url_parts:
+                fs_index = url_parts.index('for-sale')
+                if len(url_parts) > fs_index + 3:
+                    item['suburb'] = url_parts[fs_index + 1].replace('-', ' ').title()
+                    item['city'] = url_parts[fs_index + 2].replace('-', ' ').title()
+                    item['province'] = url_parts[fs_index + 3].replace('-', ' ').title()
+        except Exception as e:
+            logger.error(f"Failed to parse location from URL {response.url}: {e}")
+
+        # 2. Townhouse detection: override property_type if title says "Townhouse"
         title = item.get('title', '') or ''
         if 'townhouse' in title.lower():
             item['property_type'] = 'Townhouse'
 
-        # 2. Location fallback: if agent hid the address, use suburb/city from the card
+        # 3. Location fallback: if agent hid the address, use suburb/city from the card
+        # Or if the price says "Request Price" and the selector extracted that instead.
         location = item.get('location', '') or ''
-        if 'contact agent' in location.lower():
+        
+        # Override if location matches "Request Price"
+        if location.lower() == 'request price':
+            # We fetch the primary location selector from config:
+            location_selector = self.site_config.get('selectors', {}).get('location', '.p24_listingCard .p24_address::text')
+            base_selector = location_selector.replace('::text', '')
+            nodes = response.css(base_selector)
+            if len(nodes) > 1:
+                second_value = nodes[1].xpath('string(.)').get()
+                if second_value:
+                    item['location'] = second_value.strip()
+
+        elif 'contact agent' in location.lower():
             # The 4th child div of .p24_listingCard.p24_listingFeaturesWrapper
             # contains "Suburb, City" text (e.g. "Constantia, Cape Town")
             fallback = response.css(
