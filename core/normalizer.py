@@ -285,12 +285,13 @@ class Normalizer:
         
         # Normalize area fields
         for area_field in ['erf_size', 'floor_size']:
-            if area_field in normalized:
+            if area_field in normalized and normalized[area_field]:
                 normalized[area_field] = Normalizer.normalize_area(normalized[area_field])
 
         # Normalize currency-like fields
-        if 'rates_and_taxes' in normalized:
-            normalized['rates_and_taxes'] = Normalizer.normalize_price(normalized['rates_and_taxes'])
+        for currency_field in ['rates_and_taxes', 'levies']:
+            if currency_field in normalized:
+                normalized[currency_field] = Normalizer.normalize_price(normalized[currency_field])
 
         # Normalize booleans/strings
         for bool_field in ['backup_power', 'security', 'pets_allowed']:

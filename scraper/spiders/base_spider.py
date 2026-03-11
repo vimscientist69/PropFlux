@@ -19,7 +19,7 @@ class BaseRealEstateSpider(scrapy.Spider):
     # Override in subclasses
     site_key = None
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, start_urls=None, max_pages=None, limit=None, skip_phone=False, *args, **kwargs):
         """Initialize spider with configuration."""
         super().__init__(*args, **kwargs)
         
@@ -34,17 +34,17 @@ class BaseRealEstateSpider(scrapy.Spider):
         
         # Set start URLs if not already provided (e.g., via command line)
         if not self.start_urls:
-            self.start_urls = self.site_config.get('start_urls', [])
+            self.start_urls = start_urls or self.site_config.get('start_urls', [])
         
         self.pagination_config = self.site_config.get('pagination', {})
-        self.max_pages = self.pagination_config.get('max_pages', 50)
+        self.max_pages = max_pages or self.pagination_config.get('max_pages', 50)
         
         self.current_page = 0
         self.total_pages = None
         self.items_requested = 0
         
         # Hard limit from runner
-        self.limit = kwargs.get('limit')
+        self.limit = limit or kwargs.get('limit')
         if self.limit:
             # If hard limit is set, we ignore max_pages and dev_limit
             self.max_pages = 999999
@@ -52,6 +52,8 @@ class BaseRealEstateSpider(scrapy.Spider):
             logger.info(f"Hard limit of {self.limit} items enabled. Overriding page/dev limits.")
         else:
             self.dev_limit = settings.DEV_LIMIT
+        
+        self.skip_phone = skip_phone
 
         logger.info(f"Initialized {self.name} spider for {self.site_key}")
     

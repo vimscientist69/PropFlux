@@ -114,6 +114,12 @@ Examples:
         help='Hard limit for total number of listings to scrape (overrides max-pages and dev-limit)'
     )
     
+    parser.add_argument(
+        '--skip-phone',
+        action='store_true',
+        help='Skip the Selenium phone extraction logic for faster debugging'
+    )
+    
     args = parser.parse_args()
 
     # Handle one-time Chrome profile setup
@@ -155,6 +161,10 @@ Examples:
     if args.limit:
         spider_kwargs['limit'] = args.limit
         logger.info(f"Hard limit set to: {args.limit} listings")
+        
+    if args.skip_phone:
+        spider_kwargs['skip_phone'] = True
+        logger.info("Skipping Selenium phone extraction")
     
     # Start crawling
     process.crawl(spider_class, **spider_kwargs)
