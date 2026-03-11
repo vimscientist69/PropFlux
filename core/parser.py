@@ -122,7 +122,7 @@ class Parser:
         
         # Optional fields
         optional_fields = [
-            'agent_name', 'agent_phone', 'listing_id', 'date_posted',
+            'agent_name', 'agent_phone', 'agency_name', 'listing_id', 'date_posted',
             'erf_size', 'floor_size', 'rates_and_taxes', 'garages', 
             'parking', 'backup_power', 'security', 'pets_allowed'
         ]

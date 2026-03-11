@@ -100,6 +100,13 @@ class Property24Spider(BaseRealEstateSpider):
             if fallback:
                 item['location'] = fallback
 
+        # 4. Check for Private Seller
+        agent_name = item.get('agent_name')
+        if not agent_name:
+            agent_info = response.css('.p24_agentInfo').xpath('string(.)').get()
+            if agent_info and 'SELLER' in agent_info.strip().upper():
+                item['is_private_seller'] = True
+
         # Guard: Only fetch phone if it's not already in the page's HTML
         if item.get('agent_phone'):
             yield item

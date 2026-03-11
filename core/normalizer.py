@@ -265,6 +265,11 @@ class Normalizer:
             else:
                 normalized['agent_name'] = ' '.join(agent_name_clean.split())
 
+        agency_name = normalized.get('agency_name')
+        if agency_name:
+            agency_name_clean = str(agency_name).strip()
+            normalized['agency_name'] = ' '.join(agency_name_clean.split())        
+
         # Normalize price
         if 'price' in normalized:
             normalized['price'] = Normalizer.normalize_price(normalized['price'])
