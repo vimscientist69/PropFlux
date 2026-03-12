@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from scraper.spiders.property24 import Property24Spider
 from scraper.spiders.privateproperty import PrivatePropertySpider
-from core.phone_service import setup_chrome_profile
+from core.browser_service import setup_chrome_profile
 
 
 # Map site names to spider classes

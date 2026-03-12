@@ -39,9 +39,10 @@ sites:
       agent_profile_url: ".p24_agentPhoto a::attr(href)"
       contact_value: ".js_agentDetails::attr(data-value)"
     
-    phone_retrieval:
-      show_number_btn: "a.p24_contactEmailsLink"
-      phone_result: "span.p24_sidebarAgentContactNumber"
+    dynamic_selectors:
+      agent_phone:
+        show_btn: "a.p24_contactEmailsLink"
+        result: "span.p24_sidebarAgentContactNumber"
     
     pagination:
       type: "pattern"
@@ -71,15 +72,17 @@ sites:
       bedrooms: "[title='Bedrooms']::text"
       bathrooms: "[title='Bathrooms']::text"
       property_type: "li:contains('Property type') .property-details__value::text"
-      description: ".listing-description__text"
-      agent_name: "[alt^='Photo of']::attr(alt)"
-      # agency_name: ".p24_agencyLogoName span::text"
+      description: ".listing-description__text::text"
       listing_id: "li:contains('Listing number') .property-details__value::text"
       date_posted: "li:contains('Listing date') .property-details__value::text"
       erf_size: "[title='Land size']::text"
       rates_and_taxes: "li:contains('Rates and taxes') .property-details__value::text"
       levies: "li:contains('Levies') .property-details__value::text"
       garages: "[title='Parking spaces']::text"
+    
+    dynamic_selectors:
+      agent_name: "img[alt^='Photo of']::attr(alt)"
+      agency_name: "a[href*='/estate-agency']::attr(title)"
     
     pagination:
       type: "pattern"
@@ -88,4 +91,4 @@ sites:
       max_pages: 30
     
     rate_limit:
-      requests_per_minute: 5
+      requests_per_minute: 35

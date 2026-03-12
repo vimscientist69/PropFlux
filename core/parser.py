@@ -5,7 +5,6 @@ from typing import Dict, Any, Optional
 from scrapy.http import Response
 from loguru import logger
 
-
 class Parser:
     """Handles parsing of HTML content using configured selectors."""
     
@@ -130,7 +129,6 @@ class Parser:
         # Initialize Data Quality flags (normalized later)
         data['is_auction'] = False
         data['is_private_seller'] = False
-        
         try:
             # Extract both required and optional fields
             all_fields = required_fields + optional_fields

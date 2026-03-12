@@ -125,6 +125,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         Yields:
             Requests to listing detail pages and next page or listing data
         """
+
         # Check if this is a direct listing detail page
         if self.parser.is_detail_page(response):
             logger.info(f"Direct listing detail page detected: {response.url}")
@@ -186,7 +187,6 @@ class BaseRealEstateSpider(scrapy.Spider):
         """
         # No need for limit check here as it's handled in the discovery loop (parse)
         logger.debug(f"Parsing listing: {response.url}")
-        
         # Extract raw data
         raw_data = self.parser.parse_listing_detail(response)
         

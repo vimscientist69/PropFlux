@@ -21,18 +21,6 @@ class Property24Spider(BaseRealEstateSpider):
     
     async def parse(self, response):
         """Parse listing links from the search page."""
-        # Capture debug info on first page
-        if self.current_page == 0:  # current_page starts at 0, becomes 1 in super().parse()
-            try:
-                import os
-                os.makedirs("output", exist_ok=True)
-                html_path = f"output/debug_property24_page1.html"
-                with open(html_path, "w", encoding="utf-8") as f:
-                    f.write(response.text)
-                logger.info(f"Debug HTML saved to {html_path}")
-            except Exception as e:
-                logger.error(f"Failed to capture debug info: {e}")
-        
         # Use base class logic to process links and pagination
         async for item in super().parse(response):
             yield item
@@ -44,7 +32,7 @@ class Property24Spider(BaseRealEstateSpider):
         """
         try:
             from twisted.internet.threads import deferToThread
-            from core.phone_service import PhoneService
+            from core.browser_service import BrowserService
             
             # Get base item from the async generator
             item = None
@@ -116,13 +104,19 @@ class Property24Spider(BaseRealEstateSpider):
             try:
                 # Run the blocking Selenium call in a separate thread
                 # Wrap deferToThread in deferred_to_future for clean async/await in Scrapy
-                phone = await deferred_to_future(deferToThread(PhoneService().get_property24_phone, response.url))
-                if phone:
-                    item['agent_phone'] = phone
+                dynamic_data = await deferred_to_future(deferToThread(
+                    BrowserService().get_dynamic_data, 
+                    url=response.url, 
+                    site_key='property24',
+                    fields=['agent_phone']
+                ))
+                
+                if dynamic_data and dynamic_data.get('agent_phone'):
+                    item['agent_phone'] = dynamic_data['agent_phone']
                     logger.info(f"Updated agent_phone for {item.get('listing_id')}")
 
             except Exception as e:
-                logger.error(f"Error in Property24 phone extraction: {e}")
+                logger.error(f"Error in Property24 dynamic extraction: {e}")
 
             yield item
         except Exception as master_e:
