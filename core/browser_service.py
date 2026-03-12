@@ -155,6 +155,70 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
 
 CHROME_PROFILE_DIR = Path("chrome-profiles/nopecha-profile")
 
+NOPECHA_WEBSTORE_URL = "https://chromewebstore.google.com/detail/nopecha-captcha-solver/dknlfmjaanfblgfdfebhijalfmhmjjjo"
+
+def setup_chrome_profile() -> None:
+    """
+    Interactive one-time setup: opens Chrome with the persistent profile so a developer
+    can install the NopeCHA extension and authenticate it with their API key.
+
+    Run via:  python runner.py --setup-chrome-profile
+    """
+    CHROME_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+
+    options = webdriver.ChromeOptions()
+    options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR.resolve()}")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1280,900")
+
+    print()
+    print("=" * 60)
+    print(" NopeCHA Chrome Profile Setup")
+    print("=" * 60)
+    print()
+    print("A Chrome window is opening with a dedicated profile.")
+    print("Please follow these steps in the browser:")
+    print()
+    print("  STEP 1 — Install the NopeCHA extension:")
+    print(f"    {NOPECHA_WEBSTORE_URL}")
+    print()
+    print("  STEP 2 — Authenticate with your API key:")
+    print("    https://nopecha.com/setup#YOUR_API_KEY_HERE")
+    print("    (replace YOUR_API_KEY_HERE with your actual key)")
+    print()
+    print("  STEP 3 — Once done, close the browser window.")
+    print()
+    print("The profile will be saved to:", CHROME_PROFILE_DIR.resolve())
+    print("Add that directory to .gitignore so your API key is never committed.")
+    print("=" * 60)
+    print()
+
+    driver = webdriver.Chrome(options=options)
+
+    # Open the Chrome Web Store page for NopeCHA automatically
+    driver.get(NOPECHA_WEBSTORE_URL)
+
+    try:
+        # Block until the user closes the browser manually
+        while True:
+            try:
+                _ = driver.title  # raises if window is closed
+                time.sleep(1)
+            except Exception:
+                break
+    finally:
+        try:
+            driver.quit()
+        except Exception:
+            pass  # already closed by user
+
+    print()
+    print("Setup complete! You can now run the scraper normally.")
+    print("  python runner.py --site property24")
+    print()
+
+
 class BrowserService:
     """Retrieves dynamic data using a Selenium session."""
     

@@ -24,6 +24,6 @@ selenium
 selenium-stealth
 selenium-wire
 blinker==1.7.0
-setuptools==80.0.0
+setuptools>=70.0.0
 packaging
-chromium
+# chromium  # Usually managed via OS or webdriver-manager if preferred
