@@ -85,7 +85,7 @@ sites:
       agency_name: "a[href*='/estate-agency']::attr(title)"
       agent_phone:
         show_btn: ".contact-form-container button"
-        result: "a[href^='tel']"
+        result: ".modal--medium a[href^='tel']"
     
     pagination:
       type: "pattern"
