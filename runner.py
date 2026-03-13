@@ -115,7 +115,7 @@ Examples:
     )
     
     parser.add_argument(
-        '--skip-phone',
+        '--skip-dynamic-fields',
         action='store_true',
         help='Skip the Selenium phone extraction logic for faster debugging'
     )
@@ -162,9 +162,9 @@ Examples:
         spider_kwargs['limit'] = args.limit
         logger.info(f"Hard limit set to: {args.limit} listings")
         
-    if args.skip_phone:
-        spider_kwargs['skip_phone'] = True
-        logger.info("Skipping Selenium phone extraction")
+    if args.skip_dynamic_fields:
+        spider_kwargs['skip_dynamic_fields'] = True
+        logger.info("Skipping Selenium dynamic extraction")
     
     # Start crawling
     process.crawl(spider_class, **spider_kwargs)

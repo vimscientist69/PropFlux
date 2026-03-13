@@ -62,8 +62,8 @@ python runner.py --site privateproperty
 # Hard limit total listings (useful for testing)
 python runner.py --site property24 --limit 10
 
-# Skip expensive Selenium extraction (for rapid testing of Scrapy logic)
-python runner.py --site privateproperty --limit 5 --skip-phone
+# Skip expensive Selenium dynamic extraction (for rapid testing of Scrapy logic)
+python runner.py --site privateproperty --limit 5 --skip-dynamic-fields
 
 # Use custom URL (search results or single listing)
 python runner.py --site property24 --url "https://www.property24.com/for-sale/cape-town/western-cape/432"

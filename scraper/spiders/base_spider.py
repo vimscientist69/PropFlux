@@ -19,7 +19,7 @@ class BaseRealEstateSpider(scrapy.Spider):
     # Override in subclasses
     site_key = None
     
-    def __init__(self, start_urls=None, max_pages=None, limit=None, skip_phone=False, *args, **kwargs):
+    def __init__(self, start_urls=None, max_pages=None, limit=None, skip_dynamic_fields=False, *args, **kwargs):
         """Initialize spider with configuration."""
         super().__init__(*args, **kwargs)
         
@@ -53,7 +53,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         else:
             self.dev_limit = settings.DEV_LIMIT
         
-        self.skip_phone = skip_phone
+        self.skip_dynamic_fields = skip_dynamic_fields
 
         logger.info(f"Initialized {self.name} spider for {self.site_key}")
     

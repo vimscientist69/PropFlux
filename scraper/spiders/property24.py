@@ -98,7 +98,7 @@ class Property24Spider(BaseRealEstateSpider):
                     item['is_private_seller'] = True
 
             # Guard: Only fetch phone if it's not already in the page's HTML or if blocked by skip flag
-            if item.get('agent_phone') or self.skip_phone:
+            if item.get('agent_phone') or self.skip_dynamic_fields:
                 yield item
                 return
 
