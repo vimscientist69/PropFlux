@@ -40,6 +40,7 @@ sites:
       contact_value: ".js_agentDetails::attr(data-value)"
     
     dynamic_selectors:
+      agent_name: ".p24_agentName::text"
       agent_phone:
         show_btn: "a.p24_contactEmailsLink"
         result: "span.p24_sidebarAgentContactNumber"
@@ -83,6 +84,9 @@ sites:
     dynamic_selectors:
       agent_name: "img[alt^='Photo of']::attr(alt)"
       agency_name: "a[href*='/estate-agency']::attr(title)"
+      agent_phone:
+        show_btn: ".contact-form-container button"
+        result: "a[href^='tel']"
     
     pagination:
       type: "pattern"

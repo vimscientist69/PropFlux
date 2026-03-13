@@ -44,7 +44,7 @@ class PrivatePropertySpider(BaseRealEstateSpider):
             # --- Dynamic Data Extraction ---
             # PrivateProperty renders agent cards with JS, so we fetch these via Selenium
             try:
-                dynamic_fields = []
+                dynamic_fields = ['agent_phone']
                 if not item.get('agent_name'): dynamic_fields.append('agent_name')
                 if not item.get('agency_name'): dynamic_fields.append('agency_name')
                 

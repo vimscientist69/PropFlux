@@ -81,18 +81,40 @@ def _get_sessionized_proxy_url(base_proxy_url: str) -> str:
         
     return urlunparse(parsed._replace(netloc=new_netloc))
 
-def _human_scroll(driver: webdriver.Chrome, element):
-    """Scroll to an element using variable speed and small steps to mimic a human."""
-    target_y = element.location['y'] - 200 # Leave some space at the top
+def _human_scroll(driver: webdriver.Chrome, target: Any):
+    """
+    Scroll to an element or a pixel amount using variable speed and small steps 
+    to mimic a human. target can be an int (pixels to scroll) or a WebElement.
+    """
     current_y = driver.execute_script("return window.pageYOffset;")
-    distance = target_y - current_y
     
-    if distance > 0:
-        steps = random.randint(5, 12)
-        for i in range(steps):
-            amount = (distance / steps) + random.uniform(-10, 10)
-            driver.execute_script(f"window.scrollBy(0, {amount});")
-            time.sleep(random.uniform(0.1, 0.3))
+    if isinstance(target, (int, float)):
+        target_y = current_y + target
+    else:
+        # Assume it's an element
+        try:
+            target_y = target.location['y'] - 200 # Leave some space at the top
+        except (AttributeError, KeyError):
+            logger.warning("Browser Service: target passed to _human_scroll is neither int nor element")
+            return
+        
+    distance = target_y - current_y
+    if abs(distance) < 5:
+        return
+    
+    steps = random.randint(6, 12)
+    for i in range(steps):
+        # Re-verify current position to avoid cumulative drift
+        now_y = driver.execute_script("return window.pageYOffset;")
+        remaining = target_y - now_y
+        
+        if abs(remaining) < 5:
+            break
+            
+        # Move a portion of the remaining distance with some jitter
+        step_dist = (remaining / (steps - i)) + random.uniform(-10, 10)
+        driver.execute_script(f"window.scrollBy(0, {step_dist});")
+        time.sleep(random.uniform(0.1, 0.25))
 
 def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_data_dir: Optional[str] = None, headless: bool = True) -> webdriver.Chrome:
     """Build a Chrome driver using the provided profile path."""
@@ -114,8 +136,6 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     options.add_argument('--blink-settings=imagesEnabled=false')
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-software-rasterizer')
-    # If we need extension for CAPTCHA, don't disable extensions
-    # options.add_argument('--disable-extensions')
     options.add_argument('--mute-audio')
     
     if headless:
@@ -309,17 +329,56 @@ class BrowserService:
                     
                     try:
                         # Case 1: Complex interaction (like phone click)
-                        if isinstance(selector_config, dict):
+                        if isinstance(selector_config, dict) and field == 'agent_phone':
                             show_btn_sel = selector_config.get('show_btn')
                             result_sel = selector_config.get('result')
                             
                             if show_btn_sel:
-                                btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, show_btn_sel)))
-                                _human_scroll(driver, btn)
-                                ActionChains(driver).move_to_element(btn).click().perform()
+                                logger.info(f"Browser Service: Waiting for '{field}' show button...")
+                                # scroll down a bit to make sure the button is visible
+                                _human_scroll(driver, 200)
                                 
-                            result_el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, result_sel)))
-                            extracted_data[field] = result_el.text.strip()
+                                try:
+                                    # Filter for visible buttons with physical size
+                                    show_buttons = driver.find_elements(By.CSS_SELECTOR, show_btn_sel)
+                                    show_btn = [btn for btn in show_buttons if btn.size['height'] > 0 and btn.size['width'] > 0][0]
+
+                                    # 4.1 Human-like scrolling
+                                    _human_scroll(driver, show_btn)
+                                    time.sleep(random.uniform(0.8, 1.5))
+                                    
+                                    # 4.2 Human-like mouse movements
+                                    logger.info(f"Browser Service: Clicking '{field}' button with ActionChains jitter...")
+                                    actions = ActionChains(driver)
+                                    
+                                    # Hover with a bit of "jitter"
+                                    actions.move_to_element_with_offset(show_btn, random.randint(-5, 5), random.randint(-5, 5))
+                                    actions.pause(random.uniform(0.5, 1.2))
+                                    
+                                    # Click with slight offset
+                                    actions.click_and_hold(show_btn)
+                                    actions.pause(random.uniform(0.1, 0.2)) # Brief hold
+                                    actions.release()
+                                    actions.perform()
+                                    
+                                except Exception as click_e:
+                                    logger.warning(f"Browser Service: Resilient click failed for {field}, trying JS fallback: {click_e}")
+                                    try:
+                                        btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, show_btn_sel)))
+                                        driver.execute_script("arguments[0].click();", btn)
+                                    except:
+                                        pass
+                                
+                            logger.info(f"Browser Service: Waiting for {field} result (NopeCHA may auto-solve CAPTCHA)...")
+                            agent_phone_wait = WebDriverWait(driver, 200)
+                            result_el = agent_phone_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, result_sel)))
+                            val = result_el.text.strip()
+                            
+                            if val:
+                                logger.success(f"Browser Service: Got {field}: {val}")
+                                extracted_data[field] = val
+                            else:
+                                logger.warning(f"Browser Service: {field} element visible but text was empty")
                         
                         # Case 2: Direct extraction
                         else:
@@ -327,14 +386,14 @@ class BrowserService:
                             if "::attr(" in selector_config:
                                 base_sel, attr = selector_config.split("::attr(")
                                 attr = attr.rstrip(")")
-                                el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, base_sel)))
+                                el = driver.find_element(By.CSS_SELECTOR, base_sel)
                                 extracted_data[field] = el.get_attribute(attr)
                             elif "::text" in selector_config:
                                 base_sel = selector_config.replace("::text", "")
-                                el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, base_sel)))
+                                el = driver.find_element(By.CSS_SELECTOR, base_sel)
                                 extracted_data[field] = el.text.strip()
                             else:
-                                el = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector_config)))
+                                el = driver.find_element(By.CSS_SELECTOR, selector_config)
                                 extracted_data[field] = el.text.strip()
                                 
                     except Exception as fe:

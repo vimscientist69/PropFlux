@@ -108,12 +108,21 @@ class Property24Spider(BaseRealEstateSpider):
                     BrowserService().get_dynamic_data, 
                     url=response.url, 
                     site_key='property24',
-                    fields=['agent_phone']
+                    fields=['agent_phone', 'agent_name']
                 ))
                 
-                if dynamic_data and dynamic_data.get('agent_phone'):
+                if not dynamic_data:
+                    logger.warning(f"No dynamic data found for {item.get('listing_id')}")
+                    yield item
+                    return
+
+                if dynamic_data.get('agent_phone'):
                     item['agent_phone'] = dynamic_data['agent_phone']
                     logger.info(f"Updated agent_phone for {item.get('listing_id')}")
+
+                if not item.get('agent_name') and dynamic_data.get('agent_name'):
+                    item['agent_name'] = dynamic_data['agent_name']
+                    logger.info(f"Updated agent_name for {item.get('listing_id')}")
 
             except Exception as e:
                 logger.error(f"Error in Property24 dynamic extraction: {e}")
