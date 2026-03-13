@@ -41,32 +41,6 @@ class PrivatePropertySpider(BaseRealEstateSpider):
             if not item:
                 return
 
-            # --- Dynamic Data Extraction ---
-            # PrivateProperty renders agent cards with JS, so we fetch these via Selenium
-            try:
-                if self.skip_dynamic_fields:
-                    yield item
-                    return
-
-                dynamic_fields = ['agent_phone']
-                if not item.get('agent_name'): dynamic_fields.append('agent_name')
-                if not item.get('agency_name'): dynamic_fields.append('agency_name')
-                
-                if dynamic_fields:
-                    dynamic_data = await deferred_to_future(deferToThread(
-                        BrowserService().get_dynamic_data,
-                        url=response.url,
-                        site_key='privateproperty',
-                        fields=dynamic_fields
-                    ))
-                    
-                    if dynamic_data:
-                        for field, val in dynamic_data.items():
-                            if val: item[field] = val
-                            
-            except Exception as e:
-                logger.error(f"Error in PrivateProperty dynamic extraction: {e}")
-
             item['is_private_seller'] = False
 
             # 1. Location Hierarchy (Province, City, Suburb) from URL
@@ -119,6 +93,32 @@ class PrivatePropertySpider(BaseRealEstateSpider):
             auction_links = response.css('a[href*="bid"], a[href*="auction"]').getall()
             if auction_links:
                 item['is_auction'] = True
+
+            # --- Dynamic Data Extraction ---
+            # PrivateProperty renders agent cards with JS, so we fetch these via Selenium
+            try:
+                if self.skip_dynamic_fields:
+                    yield item
+                    return
+
+                dynamic_fields = ['agent_phone']
+                if not item.get('agent_name'): dynamic_fields.append('agent_name')
+                if not item.get('agency_name'): dynamic_fields.append('agency_name')
+                
+                if dynamic_fields:
+                    dynamic_data = await deferred_to_future(deferToThread(
+                        BrowserService().get_dynamic_data,
+                        url=response.url,
+                        site_key='privateproperty',
+                        fields=dynamic_fields
+                    ))
+                    
+                    if dynamic_data:
+                        for field, val in dynamic_data.items():
+                            if val: item[field] = val
+                            
+            except Exception as e:
+                logger.error(f"Error in PrivateProperty dynamic extraction: {e}")
 
             yield item
             
