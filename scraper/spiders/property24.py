@@ -92,8 +92,9 @@ class Property24Spider(BaseRealEstateSpider):
             # 4. Check for Private Seller
             agent_name = item.get('agent_name')
             if not agent_name:
-                agent_info = response.css('.p24_agentInfo').xpath('string(.)').get()
-                if agent_info and 'SELLER' in agent_info.strip().upper():
+                agent_name = response.css('.p24_agentInfo span::text').get()
+                item['agent_name'] = agent_name
+                if agent_name and 'SELLER' in agent_name.strip().upper():
                     item['is_private_seller'] = True
 
             # Guard: Only fetch phone if it's not already in the page's HTML or if blocked by skip flag
@@ -108,7 +109,7 @@ class Property24Spider(BaseRealEstateSpider):
                     BrowserService().get_dynamic_data, 
                     url=response.url, 
                     site_key='property24',
-                    fields=['agent_phone', 'agent_name']
+                    fields=['agent_phone']
                 ))
                 
                 if not dynamic_data:
@@ -119,10 +120,6 @@ class Property24Spider(BaseRealEstateSpider):
                 if dynamic_data.get('agent_phone'):
                     item['agent_phone'] = dynamic_data['agent_phone']
                     logger.info(f"Updated agent_phone for {item.get('listing_id')}")
-
-                if not item.get('agent_name') and dynamic_data.get('agent_name'):
-                    item['agent_name'] = dynamic_data['agent_name']
-                    logger.info(f"Updated agent_name for {item.get('listing_id')}")
 
             except Exception as e:
                 logger.error(f"Error in Property24 dynamic extraction: {e}")

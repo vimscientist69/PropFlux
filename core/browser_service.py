@@ -130,10 +130,15 @@ def _build_driver(ua: Optional[str] = None, proxy: Optional[str] = None, user_da
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
+    # Disable "Chrome didn't shut down correctly" popup
+    options.add_experimental_option("prefs", {
+        "profile.exit_type": "Normal",
+        "profile.exited_cleanly": True,
+    })
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     
-    options.add_argument('--blink-settings=imagesEnabled=false')
+    # options.add_argument('--blink-settings=imagesEnabled=false')
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-software-rasterizer')
     options.add_argument('--mute-audio')
@@ -370,7 +375,7 @@ class BrowserService:
                                         pass
                                 
                             logger.info(f"Browser Service: Waiting for {field} result (NopeCHA may auto-solve CAPTCHA)...")
-                            agent_phone_wait = WebDriverWait(driver, 200)
+                            agent_phone_wait = WebDriverWait(driver, 300)
                             result_el = agent_phone_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, result_sel)))
                             val = result_el.text.strip()
                             

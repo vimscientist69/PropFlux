@@ -40,7 +40,6 @@ sites:
       contact_value: ".js_agentDetails::attr(data-value)"
     
     dynamic_selectors:
-      agent_name: ".p24_agentName::text"
       agent_phone:
         show_btn: "a.p24_contactEmailsLink"
         result: "span.p24_sidebarAgentContactNumber"
