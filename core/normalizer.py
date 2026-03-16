@@ -231,9 +231,9 @@ class Normalizer:
             'Flat': 'Apartment',
             'Townhouse': 'Townhouse',
             'Town House': 'Townhouse',
+            'Penthouse': 'Penthouse',
             'House': 'House',
             'Villa': 'Villa',
-            'Penthouse': 'Penthouse',
             'Studio': 'Studio',
             'Duplex': 'Duplex',
         }

@@ -183,13 +183,46 @@ class Exporter:
             
             conn = sqlite3.connect(db_path)
             
-            # Write to database
-            if_exists = 'append' if append else 'replace'
-            df.to_sql(table_name, conn, if_exists=if_exists, index=False)
+            if not append:
+                df.to_sql(table_name, conn, if_exists='replace', index=False)
+            else:
+                # Check whether the table already exists
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                    (table_name,)
+                )
+                table_exists = cursor.fetchone() is not None
+
+                if table_exists:
+                    # Detect any new columns in the incoming data that the table doesn't have
+                    cursor.execute(f'PRAGMA table_info("{table_name}")')
+                    existing_cols = {row[1] for row in cursor.fetchall()}
+                    new_cols = [c for c in df.columns if c not in existing_cols]
+                    
+                    for col in new_cols:
+                        # Infer SQLite type from pandas dtype
+                        dtype = df[col].dtype
+                        if pd.api.types.is_integer_dtype(dtype):
+                            sql_type = 'INTEGER'
+                        elif pd.api.types.is_float_dtype(dtype):
+                            sql_type = 'REAL'
+                        elif pd.api.types.is_bool_dtype(dtype):
+                            sql_type = 'INTEGER'  # SQLite uses 0/1 for booleans
+                        else:
+                            sql_type = 'TEXT'
+                            
+                        logger.info(f"Exporter: Adding missing column '{col}' ({sql_type}) to SQLite table '{table_name}'")
+                        # Note: SQLite ALTER TABLE ADD COLUMN allows adding columns to existing tables
+                        cursor.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col}" {sql_type}')
+                    
+                    conn.commit()
+
+                df.to_sql(table_name, conn, if_exists='append', index=False)
             
             conn.close()
             
-            logger.debug(f"Exported {len(listings)} listings to SQLite (if_exists={if_exists}): {db_path}")
+            logger.debug(f"Exported {len(listings)} listings to SQLite (append={append}): {db_path}")
             return str(db_path)
             
         except Exception as e:
