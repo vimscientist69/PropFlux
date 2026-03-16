@@ -101,6 +101,21 @@ class Normalizer:
         return cleaned if cleaned else None
     
     @staticmethod
+    def normalize_integer(value_str: Any) -> Optional[int]:
+        """
+        Parse value as an integer. For fields guaranteed to always be whole numbers
+        (bedrooms, garages, en_suite, lounges, parking, etc.).
+        
+        Examples:
+            "4" -> 4
+            "6.0" -> 6
+        """
+        val = Normalizer.normalize_numeric(value_str)
+        if val is None:
+            return None
+        return int(val)
+    
+    @staticmethod
     def normalize_numeric(value_str: Any) -> Optional[float]:
         """
         Extract numeric value from string (for bedrooms, bathrooms, etc.).
@@ -278,8 +293,13 @@ class Normalizer:
         if 'location' in normalized:
             normalized['location'] = Normalizer.normalize_location(normalized['location'])
         
-        # Normalize numeric fields (float support)
-        for num_field in ['bedrooms', 'bathrooms', 'garages', 'parking']:
+        # Normalize integer-only fields (whole numbers guaranteed)
+        for int_field in ['bedrooms', 'garages', 'parking', 'en_suite', 'lounges']:
+            if int_field in normalized:
+                normalized[int_field] = Normalizer.normalize_integer(normalized[int_field])
+        
+        # Normalize float-allowed numeric fields (half values possible)
+        for num_field in ['bathrooms']:
             if num_field in normalized:
                 normalized[num_field] = Normalizer.normalize_numeric(normalized[num_field])
         
@@ -293,10 +313,14 @@ class Normalizer:
             if currency_field in normalized:
                 normalized[currency_field] = Normalizer.normalize_price(normalized[currency_field])
 
-        # Normalize booleans/strings
-        for bool_field in ['backup_power', 'security', 'pets_allowed']:
-            if bool_field in normalized and normalized[bool_field]:
-                normalized[bool_field] = ' '.join(str(normalized[bool_field]).split())
+        # Normalize booleans/strings (presence-based features become True or None)
+        for bool_field in ['backup_power', 'security', 'pets_allowed',
+                           'alarm', 'electric_fencing', 'pool', 'laundry', 'study', 'garden']:
+            val = normalized.get(bool_field)
+            if isinstance(val, bool):
+                pass  # already a proper boolean, leave it
+            elif val:
+                normalized[bool_field] = ' '.join(str(val).split())
 
         # Normalize property type
         if 'property_type' in normalized:

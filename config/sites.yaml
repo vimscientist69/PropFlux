@@ -71,14 +71,18 @@ sites:
       location: ".listing-details__address::text"
       bedrooms: "[title='Bedrooms']::text"
       bathrooms: "[title='Bathrooms']::text"
-      property_type: "li:contains('Property type') .property-details__value::text"
+      property_type: ".property-details__name-value:contains('Property type') .property-details__value::text"
       description: ".listing-description__text::text"
       listing_id: "li:contains('Listing number') .property-details__value::text"
       date_posted: "li:contains('Listing date') .property-details__value::text"
       erf_size: "[title='Land size']::text"
+      floor_size: ".listing-details__main-feature[title='Floor size']::text"
       rates_and_taxes: "li:contains('Rates and taxes') .property-details__value::text"
       levies: "li:contains('Levies') .property-details__value::text"
-      garages: "[title='Parking spaces']::text"
+      garages: ".property-features__list-item:contains('Garage parking') .property-features__value::text"
+      parking: ".property-features__list-item:contains('Open parking') .property-features__value::text"
+      en_suite: ".property-features__list-item:contains('En-suite') .property-features__value::text"
+      lounges: ".property-features__list-item:contains('Lounges') .property-features__value::text"
     
     dynamic_selectors:
       agent_name: "img[alt^='Photo of']::attr(alt)"
@@ -94,4 +98,4 @@ sites:
       max_pages: 30
     
     rate_limit:
-      requests_per_minute: 35
+      requests_per_minute: 50

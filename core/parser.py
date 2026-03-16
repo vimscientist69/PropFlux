@@ -133,8 +133,8 @@ class Parser:
         # Optional fields
         optional_fields = [
             'agent_name', 'agent_phone', 'agency_name', 'listing_id', 'date_posted',
-            'erf_size', 'floor_size', 'rates_and_taxes', 'levies', 'garages', 
-            'parking', 'backup_power', 'security', 'pets_allowed'
+            'erf_size', 'floor_size', 'rates_and_taxes', 'levies', 'garages',
+            'parking', 'en_suite', 'lounges', 'backup_power', 'security', 'pets_allowed'
         ]
 
         # Initialize Data Quality flags (normalized later)
