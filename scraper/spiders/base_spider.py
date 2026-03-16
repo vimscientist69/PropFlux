@@ -3,7 +3,7 @@ Base spider class with common functionality.
 """
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Generator, Optional
 import scrapy
 from scrapy.http import Response
 from loguru import logger
@@ -68,8 +68,19 @@ class BaseRealEstateSpider(scrapy.Spider):
     
     def start_requests(self) -> Generator:
         """Generate initial requests for listing pages."""
+        url_template = self.pagination_config.get('url_template', '')
+        
         for url in self.start_urls:
-            raw_url = url.split('/p')[0] if '/p' in url else url
+            # Derive the base URL stub used for constructing next page URLs.
+            # The strategy depends on the pagination URL pattern:
+            #   - Property24 style: "base/p2" → strip at "/p" boundary
+            #   - PrivateProperty style: "base/1" → strip the trailing path segment
+            if 'p{page}' in url_template:
+                # e.g. property24: /for-sale/.../p2 → /for-sale/...
+                raw_url = url.rsplit('/p', 1)[0] if '/p' in url else url
+            else:
+                raw_url = url
+            
             yield scrapy.Request(
                 url=url,
                 callback=self.parse,
@@ -99,7 +110,7 @@ class BaseRealEstateSpider(scrapy.Spider):
             logger.info(f"Reached max_pages limit: {self.max_pages}")
             return None
             
-        if next_page_num > self.total_pages:
+        if self.total_pages is not None and next_page_num > self.total_pages:
             logger.info(f"Reached end of results (page {self.total_pages})")
             return None
             

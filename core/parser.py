@@ -73,7 +73,18 @@ class Parser:
         if not selector:
             return 1
         
-        total_pages = int(response.css(selector).get())
+        raw = response.css(selector).get()
+        if not raw:
+            return None
+        
+        try:
+            # Strip unicode whitespace (incl. \xa0 non-breaking space) and
+            # any other non-digit characters before parsing
+            clean = ''.join(c for c in raw if c.isdigit())
+            total_pages = int(clean)
+        except (ValueError, TypeError):
+            logger.warning(f"Parser: Could not parse total pages from '{raw}'")
+            return None
 
         return total_pages if total_pages > 1 else 1
 

@@ -90,7 +90,7 @@ sites:
     pagination:
       type: "pattern"
       url_template: "{base_url}?page={page}"
-      total_pages_selector: ".pagination a:nth-last-child(2)::text"
+      total_pages_selector: ".paging__btn--big-number::text"
       max_pages: 30
     
     rate_limit:
