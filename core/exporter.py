@@ -23,6 +23,8 @@ class Exporter:
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        self.db_name = "listings.db"
+        self.init_jobs_table()
     
     def export_to_csv(self, listings: List[Dict[str, Any]], filename: str = None, append: bool = False) -> str:
         """
@@ -157,8 +159,85 @@ class Exporter:
             logger.error(f"Failed to export to JSON: {e}")
             raise
     
+    def init_jobs_table(self):
+        """Initialize the scrape_jobs table for tracking scraper runs."""
+        db_path = self.output_dir / self.db_name
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS scrape_jobs (
+                    job_id TEXT PRIMARY KEY,
+                    site TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    config TEXT,
+                    items_scraped INTEGER DEFAULT 0,
+                    started_at TEXT NOT NULL,
+                    ended_at TEXT
+                )
+            """)
+            conn.commit()
+            conn.close()
+            logger.debug("Exporter: jobs table initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize jobs table: {e}")
+
+    def create_job(self, job_id: str, site: str, config: Dict[str, Any] = None) -> bool:
+        """Create a new job entry in the database."""
+        db_path = self.output_dir / self.db_name
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            started_at = datetime.now().isoformat()
+            config_json = json.dumps(config) if config else None
+            
+            cursor.execute(
+                "INSERT INTO scrape_jobs (job_id, site, status, config, started_at) VALUES (?, ?, ?, ?, ?)",
+                (job_id, site, "RUNNING", config_json, started_at)
+            )
+            conn.commit()
+            conn.close()
+            logger.info(f"Exporter: Created job {job_id} for site {site}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create job {job_id}: {e}")
+            return False
+
+    def update_job_status(self, job_id: str, status: str, items_scraped: int = None, ended_at: bool = False) -> bool:
+        """Update the status and progress of an existing job."""
+        if not job_id:
+            return False
+            
+        db_path = self.output_dir / self.db_name
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            updates = ["status = ?"]
+            params = [status]
+            
+            if items_scraped is not None:
+                updates.append("items_scraped = ?")
+                params.append(items_scraped)
+            
+            if ended_at:
+                updates.append("ended_at = ?")
+                params.append(datetime.now().isoformat())
+            
+            params.append(job_id)
+            query = f"UPDATE scrape_jobs SET {', '.join(updates)} WHERE job_id = ?"
+            
+            cursor.execute(query, tuple(params))
+            conn.commit()
+            conn.close()
+            logger.debug(f"Exporter: Updated job {job_id} status to {status}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update job {job_id}: {e}")
+            return False
+
     def export_to_sqlite(self, listings: List[Dict[str, Any]], 
-                        db_name: str = "listings.db",
+                        db_name: str = None,
                         table_name: str = "listings",
                         append: bool = True) -> str:
         """
@@ -166,7 +245,7 @@ class Exporter:
         
         Args:
             listings: List of listing dictionaries
-            db_name: Database filename
+            db_name: Database filename (defaults to self.db_name)
             table_name: Table name
             append: Whether to append or replace
             
@@ -176,6 +255,7 @@ class Exporter:
         if not listings:
             return None
         
+        db_name = db_name or self.db_name
         db_path = self.output_dir / db_name
         
         try:

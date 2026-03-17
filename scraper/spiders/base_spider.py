@@ -19,13 +19,21 @@ class BaseRealEstateSpider(scrapy.Spider):
     # Override in subclasses
     site_key = None
     
-    def __init__(self, start_urls=None, max_pages=None, limit=None, skip_dynamic_fields=False, *args, **kwargs):
+    def __init__(self, start_urls=None, max_pages=None, limit=None, skip_dynamic_fields=False, job_id=None, config_overrides=None, *args, **kwargs):
         """Initialize spider with configuration."""
         super().__init__(*args, **kwargs)
         
         # Load site configuration
         self.config = self._load_config()
         self.site_config = self.config['sites'].get(self.site_key, {})
+        
+        # Apply configuration overrides from dashboard/API
+        if config_overrides:
+            logger.info(f"Applying config overrides for {self.site_key}: {config_overrides}")
+            self.site_config.update(config_overrides)
+
+        # Job tracking ID
+        self.job_id = job_id or kwargs.get('job_id')
         
         # Initialize parser and normalizer
         selectors = self.site_config.get('selectors', {})
@@ -55,7 +63,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         
         self.skip_dynamic_fields = skip_dynamic_fields
 
-        logger.info(f"Initialized {self.name} spider for {self.site_key}")
+        logger.info(f"Initialized {self.name} spider for {self.site_key} (Job: {self.job_id})")
     
     def _load_config(self) -> Dict[str, Any]:
         """Load sites configuration from YAML."""
@@ -203,6 +211,7 @@ class BaseRealEstateSpider(scrapy.Spider):
         
         # Item metadata (normalization happens in pipeline)
         raw_data['source_site'] = self.site_key
+        raw_data['job_id'] = self.job_id
         raw_data['scraped_at'] = scrapy.utils.misc.load_object(
             'datetime.datetime'
         ).now().isoformat()

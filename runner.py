@@ -12,6 +12,7 @@ from pathlib import Path
 from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from loguru import logger
+import uuid
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -59,6 +60,108 @@ def setup_logging(site_name: str = "general", verbose: bool = False):
         level=log_level,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
     )
+
+
+def run_spider(site_key: str, 
+               url: Optional[str] = None, 
+               max_pages: Optional[int] = None, 
+               limit: Optional[int] = None, 
+               skip_dynamic_fields: bool = False,
+               verbose: bool = False,
+               job_id: Optional[str] = None,
+               settings_overrides: Optional[dict] = None):
+    """
+    Programmatically run a Scrapy spider.
+    
+    Args:
+        site_key: Site to scrape (property24, privateproperty)
+        url: Custom start URL
+        max_pages: Maximum number of pages to scrape
+        limit: Hard limit for total number of listings
+        skip_dynamic_fields: Skip Selenium dynamic extraction
+        verbose: Enable verbose logging
+        job_id: Unique ID for this scrape job
+        settings_overrides: Dictionary of Scrapy settings to override
+    """
+    # Setup logging
+    setup_logging(site_key, verbose)
+    
+    # Auto-generate job_id if not provided
+    if not job_id:
+        import uuid
+        job_id = f"job_{uuid.uuid4().hex[:8]}"
+        logger.info(f"Runner: Auto-generated Job ID: {job_id}")
+
+    # Get spider class
+    if site_key not in SPIDER_MAP:
+        raise ValueError(f"Unknown site: {site_key}")
+        
+    spider_class = SPIDER_MAP[site_key]
+    
+    # Initialize exporter for job tracking
+    from core.exporter import Exporter
+    exporter = Exporter()
+    
+    logger.info(f"Starting scraper for: {site_key}")
+    if job_id:
+        logger.info(f"Job ID: {job_id}")
+        # Create job entry in database
+        job_config = {
+            'url': url,
+            'max_pages': max_pages,
+            'limit': limit,
+            'skip_dynamic_fields': skip_dynamic_fields,
+            'settings_overrides': settings_overrides
+        }
+        exporter.create_job(job_id, site_key, job_config)
+    
+    try:
+        # Get Scrapy settings
+        settings = get_project_settings()
+        if verbose:
+            settings.set('LOG_LEVEL', 'DEBUG')
+        
+        # Apply settings overrides
+        if settings_overrides:
+            for key, value in settings_overrides.items():
+                settings.set(key, value)
+                logger.info(f"Overriding setting {key} = {value}")
+        
+        # Create crawler process
+        process = CrawlerProcess(settings)
+        
+        # Prepare spider kwargs
+        spider_kwargs = {
+            'job_id': job_id,
+            'skip_dynamic_fields': skip_dynamic_fields,
+            'config_overrides': settings_overrides # Pass overrides to spider as well
+        }
+        
+        if url:
+            spider_kwargs['start_urls'] = [url]
+            logger.info(f"Using custom start URL: {url}")
+        
+        if max_pages:
+            spider_kwargs['max_pages'] = max_pages
+            logger.info(f"Max pages set to: {max_pages}")
+        
+        if limit:
+            spider_kwargs['limit'] = limit
+            logger.info(f"Hard limit set to: {limit} listings")
+        
+        # Start crawling
+        process.crawl(spider_class, **spider_kwargs)
+        
+        logger.info("Starting crawl...")
+        process.start()
+        
+        logger.info("Scraping complete!")
+        
+    except Exception as e:
+        logger.error(f"Fatal error in run_spider: {e}")
+        if job_id:
+            exporter.update_job_status(job_id, "FAILED", ended_at=True)
+        raise
 
 
 def main():
@@ -130,49 +233,17 @@ Examples:
     if not args.site:
         parser.error('--site is required unless --setup-chrome-profile is used')
 
-    # Setup logging
-    setup_logging(args.site, args.verbose)
-    
-    # Get spider class
-    spider_class = SPIDER_MAP[args.site]
-    
-    logger.info(f"Starting scraper for: {args.site}")
-    logger.info(f"Spider: {spider_class.name}")
-    
-    # Get Scrapy settings
-    settings = get_project_settings()
-    if args.verbose:
-        settings.set('LOG_LEVEL', 'DEBUG')
-    
-    # Create crawler process
-    process = CrawlerProcess(settings)
-    
-    # Prepare spider kwargs
-    spider_kwargs = {}
-    
-    if args.url:
-        spider_kwargs['start_urls'] = [args.url]
-        logger.info(f"Using custom start URL: {args.url}")
-    
-    if args.max_pages:
-        spider_kwargs['max_pages'] = args.max_pages
-        logger.info(f"Max pages set to: {args.max_pages}")
-    
-    if args.limit:
-        spider_kwargs['limit'] = args.limit
-        logger.info(f"Hard limit set to: {args.limit} listings")
-        
-    if args.skip_dynamic_fields:
-        spider_kwargs['skip_dynamic_fields'] = True
-        logger.info("Skipping Selenium dynamic extraction")
-    
-    # Start crawling
-    process.crawl(spider_class, **spider_kwargs)
-    
-    logger.info("Starting crawl...")
-    process.start()
-    
-    logger.info("Scraping complete!")
+    # Run the spider
+    job_id = str(uuid.uuid4().hex[:8])
+    run_spider(
+        site_key=args.site,
+        url=args.url,
+        max_pages=args.max_pages,
+        limit=args.limit,
+        skip_dynamic_fields=args.skip_dynamic_fields,
+        verbose=args.verbose,
+        job_id=job_id
+    )
 
 
 if __name__ == '__main__':

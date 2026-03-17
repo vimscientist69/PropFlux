@@ -14,6 +14,12 @@ PyYAML>=6.0.1
 python-dotenv>=1.0.0
 loguru>=0.7.2
 
+# API & Dashboard
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
 # Optional: For advanced features
 # streamlit>=1.29.0  # For future UI
 # schedule>=1.2.0    # For future scheduling

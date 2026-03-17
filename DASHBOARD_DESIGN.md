@@ -18,7 +18,8 @@ The PropFlux Admin System is a full-stack, comprehensive web application built t
 
 ### 3. The Frontend (React/Vite)
 - A modern, dynamic single-page application (SPA).
-- Uses WebSockets or polling to update the scraper state and live data in real-time.
+- **Client-Side Operations:** All data fetching, configuration updates, and scraper controls are initiated directly from the React client via asynchronous `fetch` or `axios` calls to the FastAPI backend.
+- **Real-time Monitoring:** Uses WebSockets or polling to update the scraper state and live data in real-time.
 - Features beautiful data visualizations and an interactive control panel.
 
 ---
@@ -42,7 +43,7 @@ To guarantee this project stands out to potential clients, the frontend must mov
 
 ## ⚙️ The Admin Control Panel (Capabilities)
 
-The dashboard is not just for viewing; it's the control center. The frontend will allow users to dynamically configure the following parameters before launching a scrape job:
+The dashboard is the central control hub. The React client executes asynchronous API requests to the FastAPI backend to dynamically configure parameters before launching or modifying a scrape job:
 
 ### Target & Scope
 *   **Target Site:** Dropdown selector (`Property24`, `PrivateProperty`, etc.).
