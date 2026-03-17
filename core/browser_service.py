@@ -402,7 +402,7 @@ class BrowserService:
                                 extracted_data[field] = el.text.strip()
                                 
                     except Exception as fe:
-                        logger.warning(f"Browser Service: Failed to extract field '{field}': {fe}")
+                        logger.warning(f"Browser Service: Failed to extract field '{field}': {fe} for url '{url}'")
 
                 return extracted_data
 

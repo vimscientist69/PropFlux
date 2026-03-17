@@ -83,6 +83,8 @@ sites:
       parking: ".property-features__list-item:contains('Open parking') .property-features__value::text"
       en_suite: ".property-features__list-item:contains('En-suite') .property-features__value::text"
       lounges: ".property-features__list-item:contains('Lounges') .property-features__value::text"
+    
+    dynamic_selectors:
       agent_name: "img[alt^='Photo of']::attr(alt)"
       agency_name: "a[href*='/estate-agency']::attr(title)"
       agent_phone:
@@ -96,4 +98,4 @@ sites:
       max_pages: 30
     
     rate_limit:
-      requests_per_minute: 50
+      requests_per_minute: 25

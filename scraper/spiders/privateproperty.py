@@ -152,29 +152,17 @@ class PrivatePropertySpider(BaseRealEstateSpider):
                 elif cty:
                     item['location'] = cty
 
-            # 3. Clean up Agent Name (from img alt attribute)
-            agent_name = item.get('agent_name')
-            if agent_name and agent_name.startswith('Photo of '):
-                item['agent_name'] = agent_name.replace('Photo of ', '').strip()
-
-            # 4. Auction Detection
-            desc = (item.get('description') or '').lower()
-            title = (item.get('title') or '').lower()
-            if 'auction' in desc or 'auction' in title:
-                item['is_auction'] = True
-            
-            auction_links = response.css('a[href*="bid"], a[href*="auction"]').getall()
-            if auction_links:
-                item['is_auction'] = True
-
-            # 5. Boolean Feature Flags from property-features-list
+            # 4. Boolean Feature Flags from property-features-list
             feature_flags = self._scrape_feature_flags(response)
             item.update(feature_flags)
 
             # --- Dynamic Data Extraction ---
-            # PrivateProperty renders agent cards with JS, so we fetch these via Selenium
             try:
                 if self.skip_dynamic_fields:
+                    # Final cleanup before yielding
+                    agent_name = item.get('agent_name')
+                    if agent_name and agent_name.startswith('Photo of '):
+                        item['agent_name'] = agent_name.replace('Photo of ', '').strip()
                     yield item
                     return
 
@@ -196,6 +184,11 @@ class PrivatePropertySpider(BaseRealEstateSpider):
                             
             except Exception as e:
                 logger.error(f"Error in PrivateProperty dynamic extraction: {e}")
+
+            # 6. Final Clean up Agent Name (handles both static and dynamic)
+            agent_name = item.get('agent_name')
+            if agent_name and agent_name.startswith('Photo of '):
+                item['agent_name'] = agent_name.replace('Photo of ', '').strip()
 
             yield item
             
