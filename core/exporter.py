@@ -176,6 +176,18 @@ class Exporter:
                     ended_at TEXT
                 )
             """)
+
+            # Ensure newer schema columns exist on older databases.
+            cursor.execute(
+                "PRAGMA table_info(scrape_jobs)"
+            )
+            existing_cols = {row[1] for row in cursor.fetchall()}
+
+            if "terminated_at" not in existing_cols:
+                cursor.execute(
+                    "ALTER TABLE scrape_jobs ADD COLUMN terminated_at TEXT"
+                )
+
             conn.commit()
             conn.close()
             logger.debug("Exporter: jobs table initialized")
@@ -203,7 +215,14 @@ class Exporter:
             logger.error(f"Failed to create job {job_id}: {e}")
             return False
 
-    def update_job_status(self, job_id: str, status: str, items_scraped: int = None, ended_at: bool = False) -> bool:
+    def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        items_scraped: int = None,
+        ended_at: bool = False,
+        terminated_at: bool = False,
+    ) -> bool:
         """Update the status and progress of an existing job."""
         if not job_id:
             return False
@@ -222,6 +241,10 @@ class Exporter:
             
             if ended_at:
                 updates.append("ended_at = ?")
+                params.append(datetime.now().isoformat())
+
+            if terminated_at:
+                updates.append("terminated_at = ?")
                 params.append(datetime.now().isoformat())
             
             params.append(job_id)

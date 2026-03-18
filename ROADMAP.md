@@ -4,14 +4,14 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 
 ## Phase 1: API Foundation & Scraper Integration (Current)
 *Focus: Enabling programmatic control and state tracking.*
-- [ ] **Scraper Engine Refactor:** 
+- [x] **Scraper Engine Refactor:** 
   - Abstract `runner.py` into a reusable `run_spider` function.
   - Implement dynamic setting overrides (injected from API).
-- [ ] **FastAPI Backend Structure:**
+- [x] **FastAPI Backend Structure:**
   - Set up basic FastAPI boilerplate.
   - Create `POST /jobs/run` endpoint to trigger background scraper tasks.
   - Create `GET /listings` endpoint to query the SQLite database.
-- [ ] **Job State Tracking:**
+- [x] **Job State Tracking:**
   - Create `scrape_jobs` table in SQLite.
   - Implement job lifecycle hooks (Pending -> Running -> Completed/Failed).
 

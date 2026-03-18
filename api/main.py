@@ -8,6 +8,7 @@ import uuid
 import sqlite3
 import pandas as pd
 import multiprocessing
+from multiprocessing.process import BaseProcess
 
 # Add project root to path so we can import runner and core
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,6 +27,10 @@ app.add_middleware(
 )
 
 DB_PATH = Path("output/listings.db")
+
+# In-memory registry of active scraper processes keyed by job_id.
+# This lives inside the FastAPI process and is sufficient for single-instance deployments.
+JOB_PROCESSES: Dict[str, BaseProcess] = {}
 
 class JobRequest(BaseModel):
     site: str
@@ -60,12 +65,79 @@ async def start_scrape_job(request: JobRequest, background_tasks: BackgroundTask
         }
     )
     proc.start()
+
+    # Track the child process so we can terminate it later if requested.
+    JOB_PROCESSES[job_id] = proc
     
     return {
         "job_id": job_id,
         "site": request.site,
         "status": "starting"
     }
+
+
+@app.post("/jobs/{job_id}/terminate")
+async def terminate_scrape_job(job_id: str):
+    """
+    Attempts to terminate a running scrape job.
+    """
+    proc = JOB_PROCESSES.get(job_id)
+
+    # If we have no record of the process, report a 404 – either it never existed
+    # for this API instance or it has already finished and been garbage-collected.
+    if proc is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No active process found for job_id={job_id}",
+        )
+
+    # If the process has already exited, clean up and report a benign response.
+    if not proc.is_alive():
+        JOB_PROCESSES.pop(job_id, None)
+        return {"job_id": job_id, "status": "already-finished"}
+
+    # Before terminating, compute the current number of items scraped for this job
+    # so we can persist an accurate snapshot in scrape_jobs.
+    items_scraped: Optional[int] = None
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) FROM listings WHERE job_id = ?",
+                (job_id,),
+            )
+            row = cursor.fetchone()
+            items_scraped = int(row[0]) if row and row[0] is not None else 0
+            conn.close()
+        except Exception as count_err:  # pragma: no cover - defensive
+            print(f"Warning: failed to count listings for job {job_id}: {count_err}")
+
+    try:
+        proc.terminate()
+        proc.join(timeout=10)
+        JOB_PROCESSES.pop(job_id, None)
+
+        # Best-effort status update in the scrape_jobs table.
+        try:
+            exporter = Exporter()
+            exporter.update_job_status(
+                job_id,
+                "TERMINATED",
+                items_scraped=items_scraped,
+                ended_at=True,
+                terminated_at=True,
+            )
+        except Exception as db_err:  # pragma: no cover - defensive
+            # We don't want DB issues to mask a successful termination.
+            print(f"Warning: failed to update terminated status for {job_id}: {db_err}")
+
+        return {"job_id": job_id, "status": "terminated"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to terminate job {job_id}: {e}",
+        )
 
 @app.get("/jobs")
 async def get_jobs_history():

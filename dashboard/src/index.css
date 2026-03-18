@@ -1,0 +1,25 @@
+/* Tailwind v4 base import */
+@import 'tailwindcss';
+
+:root {
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
+  color: rgb(229 231 235);
+}
+
+#root {
+  min-height: 100vh;
+}
