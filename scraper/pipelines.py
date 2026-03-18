@@ -92,11 +92,11 @@ class ExportPipeline:
         self.total_count += 1
         
         if len(self.items) >= self.batch_size:
-            self._flush_items()
+            self._flush_items(spider)
             
         return item
     
-    def _flush_items(self):
+    def _flush_items(self, spider=None):
         """Save buffered items to disk and clear memory."""
         if not self.items:
             return
@@ -112,7 +112,15 @@ class ExportPipeline:
         # 3. Append to SQLite
         self.exporter.export_to_sqlite(self.items, append=True)
         
-        # 4. Clear memory
+        # 4. Update job progress in database
+        if spider and getattr(spider, 'job_id', None):
+            self.exporter.update_job_status(
+                spider.job_id, 
+                "RUNNING", 
+                items_scraped=self.total_count
+            )
+        
+        # 5. Clear memory
         self.items = []
 
     def close_spider(self, spider):
@@ -121,7 +129,7 @@ class ExportPipeline:
         """
         # Final flush of remaining items
         if self.items:
-            self._flush_items()
+            self._flush_items(spider)
         
         if self.total_count == 0:
             logger.warning("No items were scraped, skipping export finalization.")

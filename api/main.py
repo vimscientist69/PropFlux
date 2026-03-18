@@ -7,6 +7,7 @@ from typing import Optional, List, Dict, Any
 import uuid
 import sqlite3
 import pandas as pd
+import multiprocessing
 
 # Add project root to path so we can import runner and core
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -45,17 +46,20 @@ async def start_scrape_job(request: JobRequest, background_tasks: BackgroundTask
     """
     job_id = f"job_{uuid.uuid4().hex[:8]}"
     
-    # Run spider in background
-    background_tasks.add_task(
-        run_spider,
-        site_key=request.site,
-        url=request.url,
-        limit=request.limit,
-        max_pages=request.max_pages,
-        skip_dynamic_fields=request.skip_dynamic_fields,
-        job_id=job_id,
-        settings_overrides=request.settings_overrides
+    # Run spider in a separate process to avoid Signal/Thread issues with Scrapy
+    proc = multiprocessing.Process(
+        target=run_spider,
+        kwargs={
+            "site_key": request.site,
+            "url": request.url,
+            "limit": request.limit,
+            "max_pages": request.max_pages,
+            "skip_dynamic_fields": request.skip_dynamic_fields,
+            "job_id": job_id,
+            "settings_overrides": request.settings_overrides
+        }
     )
+    proc.start()
     
     return {
         "job_id": job_id,
@@ -75,7 +79,13 @@ async def get_jobs_history():
         conn = sqlite3.connect(DB_PATH)
         df = pd.read_sql_query("SELECT * FROM scrape_jobs ORDER BY started_at DESC", conn)
         conn.close()
-        return df.to_dict(orient="records")
+        
+        # Explicit conversion of NaN to None for robust JSON serialization
+        records = df.to_dict(orient="records")
+        return [
+            {k: (None if pd.isna(v) else v) for k, v in record.items()}
+            for record in records
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
@@ -108,7 +118,13 @@ async def get_listings(limit: int = 100, site: Optional[str] = None, job_id: Opt
         
         df = pd.read_sql_query(query, conn, params=params)
         conn.close()
-        return df.to_dict(orient="records")
+        
+        # Explicit conversion of NaN to None for robust JSON serialization
+        records = df.to_dict(orient="records")
+        return [
+            {k: (None if pd.isna(v) else v) for k, v in record.items()}
+            for record in records
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 

@@ -156,11 +156,18 @@ def run_spider(site_key: str,
         process.start()
         
         logger.info("Scraping complete!")
+        if job_id:
+            exporter.update_job_status(job_id, "COMPLETED", ended_at=True)
         
     except Exception as e:
         logger.error(f"Fatal error in run_spider: {e}")
         if job_id:
-            exporter.update_job_status(job_id, "FAILED", ended_at=True)
+            # Re-initialize exporter in case of error in main block
+            try:
+                from core.exporter import Exporter
+                Exporter().update_job_status(job_id, "FAILED", ended_at=True)
+            except Exception as nested_e:
+                logger.error(f"Failed to update error status for job {job_id}: {nested_e}")
         raise
 
 
