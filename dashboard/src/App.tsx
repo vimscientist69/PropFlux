@@ -40,6 +40,7 @@ function App() {
   const [isLoadingTelemetry, setIsLoadingTelemetry] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const logBottomRef = useRef<HTMLDivElement | null>(null);
+  const logContainerRef = useRef<HTMLDivElement | null>(null);
   const prevItemsScrapedRef = useRef<number>(0);
 
   const activeJob = useMemo(
@@ -111,6 +112,13 @@ function App() {
     void reloadJobs();
     void reloadListings();
   }, []);
+
+  // Auto-scroll logs to bottom when new lines arrive
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logLines]);
 
   async function reloadJobs() {
     try {
@@ -628,7 +636,10 @@ function App() {
               </div>
             </div>
             <div className="px-4 py-3">
-              <div className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 max-h-[280px] overflow-y-auto">
+              <div 
+                ref={logContainerRef}
+                className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 max-h-[280px] overflow-y-auto"
+              >
                 {logLines.length === 0 ? (
                   <div className="text-slate-500">
                     No logs yet. Start a job to stream output here.
