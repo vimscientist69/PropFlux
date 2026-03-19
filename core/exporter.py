@@ -188,13 +188,24 @@ class Exporter:
                     "ALTER TABLE scrape_jobs ADD COLUMN terminated_at TEXT"
                 )
 
+            if "log_path" not in existing_cols:
+                cursor.execute(
+                    "ALTER TABLE scrape_jobs ADD COLUMN log_path TEXT"
+                )
+
             conn.commit()
             conn.close()
             logger.debug("Exporter: jobs table initialized")
         except Exception as e:
             logger.error(f"Failed to initialize jobs table: {e}")
 
-    def create_job(self, job_id: str, site: str, config: Dict[str, Any] = None) -> bool:
+    def create_job(
+        self,
+        job_id: str,
+        site: str,
+        config: Dict[str, Any] = None,
+        log_path: str | None = None,
+    ) -> bool:
         """Create a new job entry in the database."""
         db_path = self.output_dir / self.db_name
         try:
@@ -202,11 +213,20 @@ class Exporter:
             cursor = conn.cursor()
             started_at = datetime.now().isoformat()
             config_json = json.dumps(config) if config else None
-            
-            cursor.execute(
-                "INSERT INTO scrape_jobs (job_id, site, status, config, started_at) VALUES (?, ?, ?, ?, ?)",
-                (job_id, site, "RUNNING", config_json, started_at)
-            )
+
+            cursor.execute("PRAGMA table_info(scrape_jobs)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+
+            if "log_path" in existing_cols:
+                cursor.execute(
+                    "INSERT INTO scrape_jobs (job_id, site, status, config, started_at, log_path) VALUES (?, ?, ?, ?, ?, ?)",
+                    (job_id, site, "RUNNING", config_json, started_at, log_path),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO scrape_jobs (job_id, site, status, config, started_at) VALUES (?, ?, ?, ?, ?)",
+                    (job_id, site, "RUNNING", config_json, started_at),
+                )
             conn.commit()
             conn.close()
             logger.info(f"Exporter: Created job {job_id} for site {site}")

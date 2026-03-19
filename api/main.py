@@ -9,6 +9,7 @@ import sqlite3
 import pandas as pd
 import multiprocessing
 from multiprocessing.process import BaseProcess
+import json
 
 # Add project root to path so we can import runner and core
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 DB_PATH = Path("output/listings.db")
+JOB_STATS_DIR = Path("output/job_stats")
 
 # In-memory registry of active scraper processes keyed by job_id.
 # This lives inside the FastAPI process and is sufficient for single-instance deployments.
@@ -160,6 +162,129 @@ async def get_jobs_history():
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+@app.get("/jobs/{job_id}/telemetry")
+async def get_job_telemetry(job_id: str):
+    """
+    Returns near-real-time telemetry for a job:
+    - job row from scrape_jobs
+    - scraped count (from job row)
+    - pages scraped, items requested, etc (from output/job_stats/<job_id>.json)
+    - computed progress (best-effort)
+    """
+    job_row: Dict[str, Any] | None = None
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            df = pd.read_sql_query(
+                "SELECT * FROM scrape_jobs WHERE job_id = ? LIMIT 1",
+                conn,
+                params=(job_id,),
+            )
+            conn.close()
+            if not df.empty:
+                record = df.to_dict(orient="records")[0]
+                job_row = {k: (None if pd.isna(v) else v) for k, v in record.items()}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+    if job_row is None:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+    # Read job_stats file (written by the Scrapy process)
+    stats: Dict[str, Any] = {}
+    stats_path = JOB_STATS_DIR / f"{job_id}.json"
+    if stats_path.exists():
+        try:
+            stats = json.loads(stats_path.read_text(encoding="utf-8"))
+        except Exception:
+            stats = {}
+
+    # Best-effort progress computation
+    items_scraped = job_row.get("items_scraped") or 0
+    limit = stats.get("limit")
+    max_pages = stats.get("max_pages")
+    pages_scraped = stats.get("pages_scraped")
+
+    progress_mode = "unknown"
+    progress = None
+    if isinstance(limit, int) and limit > 0:
+        progress_mode = "items"
+        progress = min(1.0, items_scraped / float(limit))
+    elif isinstance(max_pages, int) and max_pages > 0 and isinstance(pages_scraped, int):
+        progress_mode = "pages"
+        progress = min(1.0, pages_scraped / float(max_pages))
+
+    is_alive = False
+    proc = JOB_PROCESSES.get(job_id)
+    if proc is not None:
+        try:
+            is_alive = proc.is_alive()
+        except Exception:
+            is_alive = False
+
+    return {
+        "job": job_row,
+        "stats": stats,
+        "runtime": {
+            "is_alive": is_alive,
+            "progress": progress,
+            "progress_mode": progress_mode,
+        },
+    }
+
+
+@app.get("/jobs/{job_id}/logs")
+async def get_job_logs(job_id: str, tail: int = 200):
+    """
+    Returns the last N lines of the job's log file.
+    """
+    if tail < 1:
+        tail = 1
+    if tail > 2000:
+        tail = 2000
+
+    log_path: Optional[str] = None
+    if DB_PATH.exists():
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT log_path, config FROM scrape_jobs WHERE job_id = ? LIMIT 1", (job_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                # Prefer explicit log_path column; fall back to config.log_path if needed
+                log_path = row[0]
+                if not log_path and row[1]:
+                    try:
+                        cfg = json.loads(row[1])
+                        log_path = cfg.get("log_path")
+                    except Exception:
+                        pass
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+    if not log_path:
+        # Fallback: attempt to find a matching log file
+        candidates = sorted(Path("logs").glob(f"*{job_id}*.log"))
+        if candidates:
+            log_path = str(candidates[-1])
+
+    if not log_path or not Path(log_path).exists():
+        return {"job_id": job_id, "log_path": log_path, "lines": []}
+
+    from collections import deque
+
+    dq: deque[str] = deque(maxlen=tail)
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                dq.append(line.rstrip("\n"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read log file: {e}")
+
+    return {"job_id": job_id, "log_path": log_path, "lines": list(dq)}
 
 @app.get("/listings")
 async def get_listings(limit: int = 100, site: Optional[str] = None, job_id: Optional[str] = None):

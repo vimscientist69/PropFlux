@@ -17,12 +17,12 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 
 ## Phase 2: Dashboard Control Center (UI Foundation)
 *Focus: A functional web interface to replace CLI commands.*
-- [ ] **React/Vite Setup:** Initialize the frontend project with Tailwind CSS.
-- [ ] **shadcn/ui Integration:** Set up the core design system and components.
-- [ ] **Main Control Panel:**
+- [x] **React/Vite Setup:** Initialize the frontend project with Tailwind CSS.
+- [x] **shadcn/ui Integration:** Set up the core design system and components.
+- [x] **Main Control Panel:**
   - Site selector, URL input, and Limit sliders.
   - "Run Job" and "Terminte" controls.
-- [ ] **API Client Implementation:** Build the services to communicate with FastAPI.
+- [x] **API Client Implementation:** Build the services to communicate with FastAPI.
 
 ## Phase 3: Real-Time Monitoring & Telemetry
 *Focus: Live feedback during active scrapes.*

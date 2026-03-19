@@ -13,6 +13,7 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.utils.project import get_project_settings
 from loguru import logger
 import uuid
+from typing import Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -29,13 +30,14 @@ SPIDER_MAP = {
 }
 
 
-def setup_logging(site_name: str = "general", verbose: bool = False):
+def setup_logging(site_name: str = "general", verbose: bool = False, job_id: Optional[str] = None) -> str:
     """
     Configure logging.
     
     Args:
         site_name: Name of the site being scraped
         verbose: Enable verbose logging
+        job_id: Optional job identifier to create a stable log file name
     """
     log_level = "DEBUG" if verbose else "INFO"
     
@@ -52,14 +54,20 @@ def setup_logging(site_name: str = "general", verbose: bool = False):
     # Add file logger
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    
+
+    log_file = log_dir / (
+        f"{site_name}_{job_id}.log" if job_id else f"{site_name}_{{time:YYYYMMDD_HHmmss}}.log"
+    )
+
     logger.add(
-        log_dir / f"{site_name}_{{time:YYYYMMDD_HHmmss}}.log",
+        log_file,
         rotation="100 MB",
         retention="7 days",
         level=log_level,
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
     )
+
+    return str(log_file)
 
 
 def run_spider(site_key: str, 
@@ -83,14 +91,14 @@ def run_spider(site_key: str,
         job_id: Unique ID for this scrape job
         settings_overrides: Dictionary of Scrapy settings to override
     """
-    # Setup logging
-    setup_logging(site_key, verbose)
-    
     # Auto-generate job_id if not provided
     if not job_id:
         import uuid
         job_id = f"job_{uuid.uuid4().hex[:8]}"
         logger.info(f"Runner: Auto-generated Job ID: {job_id}")
+
+    # Setup logging (use job_id for stable filename)
+    log_path = setup_logging(site_key, verbose, job_id=job_id)
 
     # Get spider class
     if site_key not in SPIDER_MAP:
@@ -111,9 +119,10 @@ def run_spider(site_key: str,
             'max_pages': max_pages,
             'limit': limit,
             'skip_dynamic_fields': skip_dynamic_fields,
-            'settings_overrides': settings_overrides
+            'settings_overrides': settings_overrides,
+            'log_path': log_path,
         }
-        exporter.create_job(job_id, site_key, job_config)
+        exporter.create_job(job_id, site_key, job_config, log_path=log_path)
     
     try:
         # Get Scrapy settings

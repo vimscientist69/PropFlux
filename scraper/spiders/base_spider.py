@@ -1,6 +1,7 @@
 """
 Base spider class with common functionality.
 """
+import json
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Generator, Optional
@@ -64,6 +65,37 @@ class BaseRealEstateSpider(scrapy.Spider):
         self.skip_dynamic_fields = skip_dynamic_fields
 
         logger.info(f"Initialized {self.name} spider for {self.site_key} (Job: {self.job_id})")
+
+    def _write_job_stats(self, extra: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Persist lightweight, poll-friendly job telemetry to disk.
+        FastAPI can read this file to provide real-time UI updates without
+        directly reaching into the Scrapy process internals.
+        """
+        if not self.job_id:
+            return
+
+        stats_dir = Path("output") / "job_stats"
+        stats_dir.mkdir(parents=True, exist_ok=True)
+        stats_path = stats_dir / f"{self.job_id}.json"
+
+        payload: Dict[str, Any] = {
+            "job_id": self.job_id,
+            "site": self.site_key,
+            "pages_scraped": self.current_page,
+            "items_requested": self.items_requested,
+            "max_pages": self.max_pages,
+            "limit": self.limit,
+        }
+        if extra:
+            payload.update(extra)
+
+        tmp_path = stats_path.with_suffix(".json.tmp")
+        try:
+            tmp_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            tmp_path.replace(stats_path)
+        except Exception as e:
+            logger.debug(f"Failed to write job stats for {self.job_id}: {e}")
     
     def _load_config(self) -> Dict[str, Any]:
         """Load sites configuration from YAML."""
@@ -154,6 +186,7 @@ class BaseRealEstateSpider(scrapy.Spider):
 
         self.current_page += 1
         logger.info(f"Parsing page {self.current_page}: {response.url}")
+        self._write_job_stats({"last_page_url": response.url})
         
         # Extract listing links
         listing_links = self.parser.parse_listing_links(response)

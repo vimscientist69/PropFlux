@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Play, Square, Database, Radar, Settings2 } from 'lucide-react';
 import './App.css';
 import type { JobRequest } from './types/job';
 import type { Listing } from './types/listing';
-import { runJob, fetchJobsHistory, fetchRecentListings, terminateJob } from './lib/api';
-import type { JobSummary } from './lib/api';
+import {
+  runJob,
+  fetchJobsHistory,
+  fetchRecentListings,
+  terminateJob,
+  fetchJobTelemetry,
+  fetchJobLogs,
+} from './lib/api';
+import type { JobSummary, JobTelemetry } from './lib/api';
 import { Button } from './components/ui/button';
 
 const SITES = [
@@ -28,10 +35,58 @@ function App() {
   const [useLimit, setUseLimit] = useState(false);
   const [useMaxPages, setUseMaxPages] = useState(false);
 
+  const [telemetry, setTelemetry] = useState<JobTelemetry | null>(null);
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [isLoadingTelemetry, setIsLoadingTelemetry] = useState(false);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const logBottomRef = useRef<HTMLDivElement | null>(null);
+
   const activeJob = useMemo(
     () => jobs.find((j) => j.job_id === selectedJobId) ?? jobs[0],
     [jobs, selectedJobId],
   );
+
+  // Phase 3: polling loop for telemetry + logs while job is active
+  useEffect(() => {
+    let interval: number | undefined;
+    const jobId = activeJob?.job_id;
+    if (!jobId) return;
+
+    const tick = async () => {
+      try {
+        setIsLoadingTelemetry(true);
+        const t = await fetchJobTelemetry(jobId);
+        setTelemetry(t);
+        // Keep jobs list fresh (status transitions)
+        void reloadJobs();
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingTelemetry(false);
+      }
+
+      try {
+        setIsLoadingLogs(true);
+        const logs = await fetchJobLogs(jobId, 200);
+        setLogLines(logs.lines);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingLogs(false);
+      }
+    };
+
+    void tick();
+    interval = window.setInterval(tick, 2000);
+    return () => {
+      if (interval) window.clearInterval(interval);
+    };
+  }, [activeJob?.job_id]);
+
+  useEffect(() => {
+    // Auto-scroll log console to bottom on updates
+    logBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [logLines]);
 
   useEffect(() => {
     void reloadJobs();
@@ -201,6 +256,7 @@ function App() {
                 </div>
               </div>
               <div className="px-4 pb-4 pt-3 space-y-3">
+                <ProgressStrip telemetry={telemetry} isLoading={isLoadingTelemetry} />
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-slate-300">
@@ -512,8 +568,97 @@ function App() {
               </table>
             </div>
           </section>
+
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Live Console
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Streaming tail of the active job log (polling).
+                </p>
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono">
+                {isLoadingLogs ? 'Loading…' : activeJob?.job_id ?? '—'}
+              </div>
+            </div>
+            <div className="px-4 py-3">
+              <div className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 max-h-[280px] overflow-y-auto">
+                {logLines.length === 0 ? (
+                  <div className="text-slate-500">
+                    No logs yet. Start a job to stream output here.
+                  </div>
+                ) : (
+                  <>
+                    {logLines.map((l, idx) => (
+                      <div key={`${idx}-${l.slice(0, 12)}`} className="whitespace-pre-wrap">
+                        {l}
+                      </div>
+                    ))}
+                    <div ref={logBottomRef} />
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
       </main>
+    </div>
+  );
+}
+
+function ProgressStrip({
+  telemetry,
+  isLoading,
+}: {
+  telemetry: JobTelemetry | null;
+  isLoading: boolean;
+}) {
+  const progress = telemetry?.runtime?.progress;
+  const mode = telemetry?.runtime?.progress_mode;
+  const isAlive = telemetry?.runtime?.is_alive;
+
+  const pct =
+    typeof progress === 'number' && Number.isFinite(progress)
+      ? Math.round(progress * 100)
+      : null;
+
+  const itemsScraped = telemetry?.job?.items_scraped as number | undefined;
+  const limit = telemetry?.stats?.limit as number | undefined;
+  const pages = telemetry?.stats?.pages_scraped as number | undefined;
+  const maxPages = telemetry?.stats?.max_pages as number | undefined;
+
+  let label = 'Progress unavailable';
+  if (mode === 'items' && typeof itemsScraped === 'number' && typeof limit === 'number') {
+    label = `${itemsScraped} / ${limit} items`;
+  } else if (mode === 'pages' && typeof pages === 'number' && typeof maxPages === 'number') {
+    label = `${pages} / ${maxPages} pages`;
+  } else if (typeof itemsScraped === 'number') {
+    label = `${itemsScraped} items scraped`;
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="text-xs text-slate-300">
+          <span className="font-medium text-slate-100">Telemetry</span>{' '}
+          <span className="text-slate-500">·</span>{' '}
+          <span className="text-slate-400">
+            {isLoading ? 'Updating…' : isAlive ? 'Running' : 'Idle'}
+          </span>
+        </div>
+        <div className="text-[11px] text-slate-400 font-mono">
+          {pct != null ? `${pct}%` : '—'}
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-slate-900 border border-slate-800/70 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400"
+          style={{ width: pct != null ? `${pct}%` : '6%' }}
+        />
+      </div>
+      <div className="mt-2 text-[11px] text-slate-400">{label}</div>
     </div>
   );
 }
