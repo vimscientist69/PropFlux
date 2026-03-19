@@ -650,14 +650,14 @@ function ProgressStrip({
 
   const itemsScraped = telemetry?.job?.items_scraped as number | undefined;
   const limit = telemetry?.stats?.limit as number | undefined;
-  const pages = telemetry?.stats?.pages_scraped as number | undefined;
-  const maxPages = telemetry?.stats?.max_pages as number | undefined;
+  const itemsDiscovered = telemetry?.stats?.items_discovered as number | undefined;
+  const itemsProcessed = telemetry?.stats?.items_processed as number | undefined;
 
   let label = 'Progress unavailable';
   if (mode === 'items' && typeof itemsScraped === 'number' && typeof limit === 'number') {
     label = `${itemsScraped} / ${limit} items`;
-  } else if (mode === 'pages' && typeof pages === 'number' && typeof maxPages === 'number') {
-    label = `${pages} / ${maxPages} pages`;
+  } else if (mode === 'dynamic' && typeof itemsProcessed === 'number' && typeof itemsDiscovered === 'number') {
+    label = `${itemsProcessed} / ${itemsDiscovered} links processed`;
   } else if (typeof itemsScraped === 'number') {
     label = `${itemsScraped} items scraped`;
   }

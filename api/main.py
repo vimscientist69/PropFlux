@@ -206,15 +206,20 @@ async def get_job_telemetry(job_id: str):
     limit = stats.get("limit")
     max_pages = stats.get("max_pages")
     pages_scraped = stats.get("pages_scraped")
+    
+    items_discovered = stats.get("items_discovered")
+    items_processed = stats.get("items_processed")
 
     progress_mode = "unknown"
     progress = None
+    
     if isinstance(limit, int) and limit > 0:
         progress_mode = "items"
         progress = min(1.0, items_scraped / float(limit))
-    elif isinstance(max_pages, int) and max_pages > 0 and isinstance(pages_scraped, int):
-        progress_mode = "pages"
-        progress = min(1.0, pages_scraped / float(max_pages))
+    elif isinstance(items_discovered, int) and items_discovered > 0 and isinstance(items_processed, int):
+        # Dynamic progress based on discovery vs processing
+        progress_mode = "dynamic"
+        progress = min(1.0, items_processed / float(items_discovered))
 
     is_alive = False
     proc = JOB_PROCESSES.get(job_id)

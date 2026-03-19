@@ -51,6 +51,8 @@ class BaseRealEstateSpider(scrapy.Spider):
         self.current_page = 0
         self.total_pages = None
         self.items_requested = 0
+        self.items_discovered = 0
+        self.items_processed = 0
         
         # Hard limit from runner
         self.limit = limit or kwargs.get('limit')
@@ -84,6 +86,8 @@ class BaseRealEstateSpider(scrapy.Spider):
             "site": self.site_key,
             "pages_scraped": self.current_page,
             "items_requested": self.items_requested,
+            "items_discovered": self.items_discovered,
+            "items_processed": self.items_processed,
             "max_pages": self.max_pages,
             "limit": self.limit,
         }
@@ -204,6 +208,7 @@ class BaseRealEstateSpider(scrapy.Spider):
                 return # Stop processing this page and don't look for more
                 
             self.items_requested += 1
+            self.items_discovered += 1
             
             yield scrapy.Request(
                 url=link,
@@ -249,6 +254,9 @@ class BaseRealEstateSpider(scrapy.Spider):
             'datetime.datetime'
         ).now().isoformat()
         
+        self.items_processed += 1
+        self._write_job_stats()
+        
         yield raw_data
     
     def handle_error(self, failure):
@@ -260,3 +268,6 @@ class BaseRealEstateSpider(scrapy.Spider):
         """
         logger.error(f"Request failed: {failure.request.url}")
         logger.error(f"Error: {failure.value}")
+        
+        self.items_processed += 1
+        self._write_job_stats()
