@@ -40,6 +40,7 @@ function App() {
   const [isLoadingTelemetry, setIsLoadingTelemetry] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const logBottomRef = useRef<HTMLDivElement | null>(null);
+  const prevItemsScrapedRef = useRef<number>(0);
 
   const activeJob = useMemo(
     () => jobs.find((j) => j.job_id === selectedJobId) ?? jobs[0],
@@ -52,6 +53,9 @@ function App() {
     const jobId = activeJob?.job_id;
     if (!jobId) return;
 
+    // Reset tracking for new job selection
+    prevItemsScrapedRef.current = 0;
+
     // A job is considered "running" if its status is 'RUNNING' or 'starting'
     const isRunning =
       activeJob?.status === 'RUNNING' || activeJob?.status === 'starting';
@@ -61,6 +65,14 @@ function App() {
         setIsLoadingTelemetry(true);
         const t = await fetchJobTelemetry(jobId);
         setTelemetry(t);
+
+        // Conditional auto-refresh: if items_scraped increased, reload listings
+        const currentCount = (t.job?.items_scraped as number) || 0;
+        if (currentCount > prevItemsScrapedRef.current) {
+          void reloadListings(jobId);
+          prevItemsScrapedRef.current = currentCount;
+        }
+
         // Keep jobs list fresh (status transitions)
         void reloadJobs();
       } catch (err) {
@@ -82,6 +94,8 @@ function App() {
 
     // Always poll once when the effect runs (e.g. on manual selection)
     void tick();
+    // Also reload listings for this specific job when selection changes
+    void reloadListings(jobId);
 
     // Only start interval if the job is currently running
     if (isRunning) {
@@ -116,7 +130,7 @@ function App() {
       setIsLoadingListings(true);
       const data = await fetchRecentListings({
         limit: 25,
-        site: form.site,
+        site: jobId ? undefined : form.site, // If we have a specific job, don't over-filter by currently selected site
         job_id: jobId ?? undefined,
       });
       setListings(data);
@@ -498,10 +512,16 @@ function App() {
               <div>
                 <h2 className="text-sm font-semibold text-slate-50">
                   Latest Listings
+                  {activeJob?.job_id && (
+                    <span className="ml-2 text-[11px] font-mono text-indigo-400 font-normal">
+                      ({activeJob.job_id})
+                    </span>
+                  )}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  A compact data grid of the most recent records in your
-                  SQLite-backed listing store.
+                  {activeJob?.job_id
+                    ? `Showing results for job ${activeJob.job_id} on ${activeJob.site}.`
+                    : "A compact data grid of the most recent records across all jobs."}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
