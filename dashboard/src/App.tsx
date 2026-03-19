@@ -304,9 +304,9 @@ function App() {
 
       {/* Sidebar - Desktop and Mobile Drawer */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 px-6 py-5 transition-transform duration-300 transform
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:flex
+        fixed inset-y-0 left-0 z-50 w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 transition-all duration-300 transform px-6 py-5
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        md:relative md:flex hidden
       `}>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -352,7 +352,7 @@ function App() {
             {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}
           </span>
         </div>
-      </aside>      <main className="flex-1 flex flex-col">
+      </aside>      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -511,7 +511,7 @@ function App() {
 
           {/* Latest Listings */}
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 overflow-hidden">
-            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto whitespace-nowrap">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden">
               <div>
                 <h2 className="text-sm font-semibold text-slate-50">
                   Latest Listings
