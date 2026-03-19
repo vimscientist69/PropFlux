@@ -52,6 +52,10 @@ function App() {
     const jobId = activeJob?.job_id;
     if (!jobId) return;
 
+    // A job is considered "running" if its status is 'RUNNING' or 'starting'
+    const isRunning =
+      activeJob?.status === 'RUNNING' || activeJob?.status === 'starting';
+
     const tick = async () => {
       try {
         setIsLoadingTelemetry(true);
@@ -76,17 +80,18 @@ function App() {
       }
     };
 
+    // Always poll once when the effect runs (e.g. on manual selection)
     void tick();
-    interval = window.setInterval(tick, 2000);
+
+    // Only start interval if the job is currently running
+    if (isRunning) {
+      interval = window.setInterval(tick, 2000);
+    }
+
     return () => {
       if (interval) window.clearInterval(interval);
     };
-  }, [activeJob?.job_id]);
-
-  useEffect(() => {
-    // Auto-scroll log console to bottom on updates
-    logBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [logLines]);
+  }, [activeJob?.job_id, activeJob?.status]);
 
   useEffect(() => {
     void reloadJobs();
@@ -144,9 +149,21 @@ function App() {
 
       const res = await runJob(payload);
       setStatusMessage(`Job ${res.job_id} started for ${res.site}.`);
-      await reloadJobs();
-      await reloadListings(res.job_id);
+      
+      // Optimistic update: add the new job to the top of the list immediately
+      const optimisticJob: JobSummary = {
+        job_id: res.job_id,
+        site: res.site,
+        status: res.status, // typically "starting"
+        started_at: new Date().toISOString().replace('T', ' ').split('.')[0], // roughly match DB format
+        items_scraped: 0,
+      };
+      
+      setJobs((prev) => [optimisticJob, ...prev]);
       setSelectedJobId(res.job_id);
+      
+      // Load initial listings for the new job
+      await reloadListings(res.job_id);
     } catch (err) {
       console.error(err);
       setStatusMessage(
@@ -164,7 +181,14 @@ function App() {
       setStatusMessage(`Terminating job ${activeJob.job_id}…`);
       const res = await terminateJob(activeJob.job_id);
       setStatusMessage(`Job ${res.job_id} ${res.status}.`);
-      await reloadJobs();
+      
+      // Optimistic update: update the status in the list immediately
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.job_id === activeJob.job_id ? { ...j, status: res.status } : j,
+        ),
+      );
+      
       await reloadListings(activeJob.job_id);
     } catch (err) {
       console.error(err);
@@ -702,9 +726,8 @@ function SliderField({
         </label>
         <span className="text-[11px] text-slate-400">
           {enabled
-            ? `${value} ${
-                label.toLowerCase().includes('pages') ? 'pages' : 'items'
-              }`
+            ? `${value} ${label.toLowerCase().includes('pages') ? 'pages' : 'items'
+            }`
             : 'Off (use defaults)'}
         </span>
       </div>
