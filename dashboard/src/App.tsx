@@ -238,7 +238,7 @@ function App() {
 
       const res = await runJob(payload);
       setStatusMessage(`Job ${res.job_id} started for ${res.site}.`);
-      
+
       // Optimistic update: add the new job to the top of the list immediately
       const optimisticJob: JobSummary = {
         job_id: res.job_id,
@@ -247,10 +247,10 @@ function App() {
         started_at: new Date().toISOString().replace('T', ' ').split('.')[0], // roughly match DB format
         items_scraped: 0,
       };
-      
+
       setJobs((prev) => [optimisticJob, ...prev]);
       setSelectedJobId(res.job_id);
-      
+
       // Load initial listings for the new job
       await reloadListings(res.job_id);
     } catch (err) {
@@ -270,14 +270,14 @@ function App() {
       setStatusMessage(`Terminating job ${activeJob.job_id}…`);
       const res = await terminateJob(activeJob.job_id);
       setStatusMessage(`Job ${res.job_id} ${res.status}.`);
-      
+
       // Optimistic update: update the status in the list immediately
       setJobs((prev) =>
         prev.map((j) =>
           j.job_id === activeJob.job_id ? { ...j, status: res.status } : j,
         ),
       );
-      
+
       await reloadListings(activeJob.job_id);
     } catch (err) {
       console.error(err);
@@ -345,12 +345,6 @@ function App() {
                 Configure targets, launch jobs, and inspect fresh listings from
                 your multi-site real-estate scraper.
               </p>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
-              <span className="h-8 w-px bg-slate-800" />
-              <span className="font-mono text-[11px] tracking-tight">
-                Phase 2 · UI Foundation
-              </span>
             </div>
           </div>
         </header>
@@ -457,13 +451,6 @@ function App() {
                         </span>
                       </span>
                     </label>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/80 px-2 py-1">
-                      <span className="inline-flex h-1.5 w-5 rounded-full bg-gradient-to-r from-emerald-400 via-indigo-400 to-sky-400 shadow-[0_0_12px_rgba(129,140,248,0.9)]" />
-                      <span>Multi-site ready</span>
-                    </div>
-                    <span className="hidden sm:inline text-slate-600">
-                      · Phase 2 control surface
-                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -737,7 +724,7 @@ function App() {
               </div>
             </div>
             <div className="px-4 py-3">
-              <div 
+              <div
                 ref={logContainerRef}
                 className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 max-h-[280px] overflow-y-auto"
               >
@@ -748,9 +735,9 @@ function App() {
                 ) : (
                   <>
                     {logLines.map((l, idx) => (
-                      <AnsiLogLine 
-                        key={`${idx}-${l.slice(0, 12)}`} 
-                        line={l} 
+                      <AnsiLogLine
+                        key={`${idx}-${l.slice(0, 12)}`}
+                        line={l}
                         id={`log-line-${idx}`}
                         searchQuery={searchQuery}
                         isActiveLine={searchMatches[activeMatchIndex]?.lineIndex === idx}
@@ -825,15 +812,15 @@ function ProgressStrip({
 
 const ANSI_REGEX = /\x1b\[(\d+(?:;\d+)*)m/;
 
-function AnsiLogLine({ 
-  line, 
-  id, 
-  searchQuery, 
-  isActiveLine 
-}: { 
-  line: string; 
-  id?: string; 
-  searchQuery?: string; 
+function AnsiLogLine({
+  line,
+  id,
+  searchQuery,
+  isActiveLine
+}: {
+  line: string;
+  id?: string;
+  searchQuery?: string;
   isActiveLine?: boolean;
 }) {
   const parts = line.split(ANSI_REGEX);
@@ -845,18 +832,17 @@ function AnsiLogLine({
     const searchParts = text.split(new RegExp(`(${escapeRegExp(searchQuery)})`, 'gi'));
     return (
       <>
-        {searchParts.map((part, i) => 
-          part.toLowerCase() === searchQuery.toLowerCase() 
-            ? <mark 
-                key={i} 
-                className={`rounded-sm px-0.5 transition-all ${
-                  isActiveLine 
-                    ? 'bg-indigo-500/40 border border-indigo-400/50' 
-                    : 'bg-white/10'
+        {searchParts.map((part, i) =>
+          part.toLowerCase() === searchQuery.toLowerCase()
+            ? <mark
+              key={i}
+              className={`rounded-sm px-0.5 transition-all ${isActiveLine
+                ? 'bg-indigo-500/40 border border-indigo-400/50'
+                : 'bg-white/10'
                 }`}
-              >
-                {part}
-              </mark>
+            >
+              {part}
+            </mark>
             : part
         )}
       </>
