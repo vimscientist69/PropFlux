@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Square, Database, Radar, Settings2 } from 'lucide-react';
+import { Play, Square, Database, Radar, Settings2, Search, RefreshCw } from 'lucide-react';
 import './App.css';
 import type { JobRequest } from './types/job';
 import type { Listing } from './types/listing';
@@ -43,10 +43,63 @@ function App() {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const prevItemsScrapedRef = useRef<number>(0);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+
   const activeJob = useMemo(
     () => jobs.find((j) => j.job_id === selectedJobId) ?? jobs[0],
     [jobs, selectedJobId],
   );
+
+  // Memoized search matches across all log lines
+  const searchMatches = useMemo(() => {
+    if (!searchQuery) return [];
+    const matches: { lineIndex: number; text: string }[] = [];
+    const regex = new RegExp(escapeRegExp(searchQuery), "gi");
+    logLines.forEach((line, lineIndex) => {
+      // Strip ANSI codes for matching
+      const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, "");
+      const lineMatches = cleanLine.match(regex);
+      if (lineMatches) {
+        lineMatches.forEach(() => {
+          matches.push({ lineIndex, text: cleanLine });
+        });
+      }
+    });
+    return matches;
+  }, [logLines, searchQuery]);
+
+  // Effect to handle search navigation
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchMatches.length === 0) return;
+      if (e.shiftKey) {
+        setActiveMatchIndex((prev) =>
+          prev <= 0 ? searchMatches.length - 1 : prev - 1
+        );
+      } else {
+        setActiveMatchIndex((prev) =>
+          prev >= searchMatches.length - 1 ? 0 : prev + 1
+        );
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (searchMatches.length > 0 && searchQuery) {
+      const activeMatch = searchMatches[activeMatchIndex];
+      if (activeMatch) {
+        const lineElement = document.getElementById(
+          `log-line-${activeMatch.lineIndex}`
+        );
+        if (lineElement && logContainerRef.current) {
+          lineElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }
+  }, [activeMatchIndex, searchMatches, searchQuery]);
 
   // Phase 3: polling loop for telemetry + logs while job is active
   useEffect(() => {
@@ -147,6 +200,20 @@ function App() {
       setStatusMessage('Failed to load recent listings.');
     } finally {
       setIsLoadingListings(false);
+    }
+  }
+
+  async function reloadLogs() {
+    if (!activeJob?.job_id) return;
+    try {
+      setIsLoadingLogs(true);
+      const logs = await fetchJobLogs(activeJob.job_id, 200); // Assuming 200 lines is a good default
+      setLogLines(logs.lines);
+    } catch (err) {
+      console.error(err);
+      setStatusMessage('Failed to load job logs.');
+    } finally {
+      setIsLoadingLogs(false);
     }
   }
 
@@ -534,7 +601,7 @@ function App() {
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
                 <span className="hidden sm:inline">
-                  Showing up to 25 items
+                  {/* Search UI removed from here */}
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-900/80 px-2 py-0.5 font-mono text-[10px] text-slate-400">
                   {isLoadingListings
@@ -622,17 +689,51 @@ function App() {
           </section>
 
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80">
-            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
-              <div>
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80">
+              <div className="flex items-center justify-between gap-2 mb-1">
                 <h2 className="text-sm font-semibold text-slate-50">
                   Live Console
                 </h2>
+                <div className="flex items-center gap-3">
+                  <div className="relative group">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                    <input
+                      type="text"
+                      placeholder="Search logs..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setActiveMatchIndex(0);
+                      }}
+                      onKeyDown={handleSearchKeyDown}
+                      className="w-48 rounded-md border border-slate-800 bg-slate-900/50 py-1 pl-8 pr-2 text-[11px] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                    />
+                    {searchQuery && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono pointer-events-none">
+                        {searchMatches.length > 0
+                          ? `${activeMatchIndex + 1}/${searchMatches.length}`
+                          : "0/0"}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => void reloadLogs()}
+                    className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900/50 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-all border-dashed"
+                  >
+                    <RefreshCw
+                      className={`h-3 w-3 ${isLoadingLogs ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-slate-400">
                   Streaming tail of the active job log (polling).
                 </p>
-              </div>
-              <div className="text-[11px] text-slate-500 font-mono">
-                {isLoadingLogs ? 'Loading…' : activeJob?.job_id ?? '—'}
+                <div className="text-[11px] text-slate-500 font-mono">
+                  {isLoadingLogs ? 'Loading…' : activeJob?.job_id ?? '—'}
+                </div>
               </div>
             </div>
             <div className="px-4 py-3">
@@ -647,7 +748,13 @@ function App() {
                 ) : (
                   <>
                     {logLines.map((l, idx) => (
-                      <AnsiLogLine key={`${idx}-${l.slice(0, 12)}`} line={l} />
+                      <AnsiLogLine 
+                        key={`${idx}-${l.slice(0, 12)}`} 
+                        line={l} 
+                        id={`log-line-${idx}`}
+                        searchQuery={searchQuery}
+                        isActiveLine={searchMatches[activeMatchIndex]?.lineIndex === idx}
+                      />
                     ))}
                     <div ref={logBottomRef} />
                   </>
@@ -718,17 +825,50 @@ function ProgressStrip({
 
 const ANSI_REGEX = /\x1b\[(\d+(?:;\d+)*)m/;
 
-function AnsiLogLine({ line }: { line: string }) {
+function AnsiLogLine({ 
+  line, 
+  id, 
+  searchQuery, 
+  isActiveLine 
+}: { 
+  line: string; 
+  id?: string; 
+  searchQuery?: string; 
+  isActiveLine?: boolean;
+}) {
   const parts = line.split(ANSI_REGEX);
   const elements: React.ReactNode[] = [];
   let currentStyles: React.CSSProperties = {};
+
+  const HighlightedText = ({ text }: { text: string }) => {
+    if (!searchQuery) return <>{text}</>;
+    const searchParts = text.split(new RegExp(`(${escapeRegExp(searchQuery)})`, 'gi'));
+    return (
+      <>
+        {searchParts.map((part, i) => 
+          part.toLowerCase() === searchQuery.toLowerCase() 
+            ? <mark 
+                key={i} 
+                className={`rounded-sm px-0.5 transition-all ${
+                  isActiveLine 
+                    ? 'bg-indigo-500/40 border border-indigo-400/50' 
+                    : 'bg-white/10'
+                }`}
+              >
+                {part}
+              </mark>
+            : part
+        )}
+      </>
+    );
+  };
 
   for (let i = 0; i < parts.length; i++) {
     if (i % 2 === 0) {
       if (parts[i]) {
         elements.push(
           <span key={i} style={{ ...currentStyles }}>
-            {parts[i]}
+            <HighlightedText text={parts[i]} />
           </span>
         );
       }
@@ -763,7 +903,11 @@ function AnsiLogLine({ line }: { line: string }) {
     }
   }
 
-  return <div className="whitespace-pre-wrap">{elements}</div>;
+  return <div id={id} className={`whitespace-pre-wrap ${isActiveLine ? 'bg-indigo-500/5' : ''}`}>{elements}</div>;
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 interface SliderFieldProps {
