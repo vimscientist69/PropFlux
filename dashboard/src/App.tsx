@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Square, Database, Radar, Settings2, Search, RefreshCw } from 'lucide-react';
+import { Play, Square, Database, Radar, Settings2, Search, RefreshCw, Menu, X } from 'lucide-react';
 import './App.css';
 import type { JobRequest } from './types/job';
 import type { Listing } from './types/listing';
@@ -42,6 +42,9 @@ function App() {
   const logBottomRef = useRef<HTMLDivElement | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const prevItemsScrapedRef = useRef<number>(0);
+
+  // Mobile navigation state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -291,17 +294,38 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
-      <aside className="hidden md:flex w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 px-6 py-5">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="h-9 w-9 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Radar className="h-5 w-5 text-indigo-300" />
-          </div>
-          <div>
-            <div className="text-sm font-semibold tracking-tight">
-              PropFlux
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop and Mobile Drawer */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 px-6 py-5 transition-transform duration-300 transform
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 md:flex
+      `}>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <Radar className="h-5 w-5 text-indigo-300" />
             </div>
-            <div className="text-xs text-slate-400">Scraper Control Center</div>
+            <div>
+              <div className="text-sm font-semibold tracking-tight">
+                PropFlux
+              </div>
+              <div className="text-xs text-slate-400">Scraper Control Center</div>
+            </div>
           </div>
+          <button 
+            className="md:hidden p-1 text-slate-400 hover:text-slate-100"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <nav className="space-y-1 text-sm">
@@ -328,249 +352,166 @@ function App() {
             {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}
           </span>
         </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col">
-        <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md">
+      </aside>      <main className="flex-1 flex flex-col">
+        <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/80 px-3 py-1 text-xs text-slate-400 mb-2">
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                Live scraper environment
+            <div className="flex items-center gap-3">
+              <button
+                className="md:hidden p-2 -ml-2 text-slate-400 hover:text-slate-100 transition-colors"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-800/80 bg-slate-900/80 px-3 py-1 text-xs text-slate-400 mb-2">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+                  Live scraper environment
+                </div>
+                <h1 className="text-lg md:text-xl font-semibold tracking-tight text-slate-50">
+                  Dashboard Control Center
+                </h1>
+                <p className="text-xs md:text-sm text-slate-400">
+                  Configure targets, launch jobs, and inspect fresh listings from
+                  your multi-site real-estate scraper.
+                </p>
               </div>
-              <h1 className="text-lg md:text-xl font-semibold tracking-tight text-slate-50">
-                Dashboard Control Center
-              </h1>
-              <p className="text-xs md:text-sm text-slate-400">
-                Configure targets, launch jobs, and inspect fresh listings from
-                your multi-site real-estate scraper.
-              </p>
             </div>
           </div>
         </header>
 
         <div className="flex-1 max-w-6xl mx-auto w-full px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-          <section className="grid gap-3 md:gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-            <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 shadow-[0_18px_60px_rgba(15,23,42,0.9)]">
-              <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-50">
-                    Main Control Panel
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Choose a target site, tune scope, and dispatch a new job.
-                  </p>
-                </div>
-              </div>
-              <div className="px-4 pb-4 pt-3 space-y-3">
-                <ProgressStrip telemetry={telemetry} isLoading={isLoadingTelemetry} />
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-300">
-                      Target site
-                    </label>
-                    <select
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-                      value={form.site}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, site: e.target.value }))
-                      }
-                    >
-                      {SITES.map((site) => (
-                        <option key={site.value} value={site.value}>
-                          {site.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
-                      Start URL / Search query
-                      <span className="text-[11px] font-normal text-slate-500">
-                        Optional – falls back to site defaults
-                      </span>
-                    </label>
-                    <input
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-600 focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40"
-                      placeholder="https://www.property24.com/for-sale/..."
-                      value={form.url ?? ''}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, url: e.target.value }))
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <SliderField
-                    label="Hard item limit"
-                    hint="Optional safety cap on total listings saved."
-                    min={20}
-                    max={500}
-                    step={10}
-                    value={form.limit ?? 100}
-                    onChange={(value) =>
-                      setForm((prev) => ({ ...prev, limit: value }))
-                    }
-                    enabled={useLimit}
-                    onToggleEnabled={setUseLimit}
-                  />
-                  <SliderField
-                    label="Max pages"
-                    hint="Optional cap on pagination depth."
-                    min={1}
-                    max={25}
-                    step={1}
-                    value={form.max_pages ?? 5}
-                    onChange={(value) =>
-                      setForm((prev) => ({ ...prev, max_pages: value }))
-                    }
-                    enabled={useMaxPages}
-                    onToggleEnabled={setUseMaxPages}
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="flex flex-col gap-2 text-xs text-slate-400">
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-indigo-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
-                        checked={form.skip_dynamic_fields ?? false}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            skip_dynamic_fields: e.target.checked,
-                          }))
-                        }
-                      />
-                      <span>
-                        Skip dynamic fields{' '}
-                        <span className="text-slate-500">
-                          (bypass Selenium / phone extraction)
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!activeJob?.job_id || isTerminating}
-                      onClick={() => void handleTerminateJob()}
-                    >
-                      <Square className="h-3.5 w-3.5" />
-                      {isTerminating ? 'Terminating…' : 'Terminate'}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => void handleRunJob()}
-                      disabled={isRunning}
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                      {isRunning ? 'Launching…' : 'Run job'}
-                    </Button>
-                  </div>
-                </div>
-
-                {statusMessage && (
-                  <div className="rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-xs text-slate-300">
-                    {statusMessage}
-                  </div>
-                )}
+          {/* Main Control Panel */}
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 shadow-[0_18px_60px_rgba(15,23,42,0.9)] overflow-hidden">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Main Control Panel
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Choose a target site, tune scope, and dispatch a new job.
+                </p>
               </div>
             </div>
+            <div className="px-4 pb-4 pt-3 space-y-3">
+              <ProgressStrip telemetry={telemetry} isLoading={isLoadingTelemetry} />
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-300">
+                    Target site
+                  </label>
+                  <select
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                    value={form.site}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, site: e.target.value }))
+                    }
+                  >
+                    {SITES.map((site) => (
+                      <option key={site.value} value={site.value}>
+                        {site.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
+                    Start URL / Search query
+                    <span className="text-[11px] font-normal text-slate-500">
+                      Optional – falls back to site defaults
+                    </span>
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 outline-none ring-0 placeholder:text-slate-600 focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                    placeholder="https://www.property24.com/for-sale/..."
+                    value={form.url ?? ''}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, url: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
 
-            <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/80">
-              <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-50">
-                    Recent Jobs
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Lightweight snapshot of your latest scraper runs.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    void reloadJobs();
-                    void reloadListings(selectedJobId);
-                  }}
-                  aria-label="Refresh jobs"
-                >
-                  <Radar className="h-4 w-4 text-indigo-300" />
-                </Button>
+              <div className="grid gap-3 md:grid-cols-2">
+                <SliderField
+                  label="Hard item limit"
+                  hint="Optional safety cap on total listings saved."
+                  min={20}
+                  max={500}
+                  step={10}
+                  value={form.limit ?? 100}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, limit: value }))
+                  }
+                  enabled={useLimit}
+                  onToggleEnabled={setUseLimit}
+                />
+                <SliderField
+                  label="Max pages"
+                  hint="Optional cap on pagination depth."
+                  min={1}
+                  max={25}
+                  step={1}
+                  value={form.max_pages ?? 5}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, max_pages: value }))
+                  }
+                  enabled={useMaxPages}
+                  onToggleEnabled={setUseMaxPages}
+                />
               </div>
-              <div className="px-4 pb-4 pt-2">
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scroll">
-                  {isLoadingJobs && (
-                    <div className="text-xs text-slate-500 py-2">
-                      Loading jobs…
-                    </div>
-                  )}
-                  {!isLoadingJobs && jobs.length === 0 && (
-                    <div className="text-xs text-slate-500 py-2">
-                      No jobs recorded yet. Launch your first scrape from the
-                      control panel.
-                    </div>
-                  )}
-                  {jobs.map((job) => {
-                    const isSelected = job.job_id === activeJob?.job_id;
-                    return (
-                      <button
-                        key={job.job_id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedJobId(job.job_id);
-                          void reloadListings(job.job_id);
-                        }}
-                        className={[
-                          'w-full text-left rounded-xl border px-3 py-2.5 transition-colors',
-                          isSelected
-                            ? 'border-indigo-500/70 bg-slate-900/90 shadow-sm shadow-indigo-500/20'
-                            : 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/80',
-                        ].join(' ')}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-100">
-                              {job.site}
-                            </span>
-                            <span className="h-1 w-1 rounded-full bg-slate-700" />
-                            <span className="text-[11px] uppercase tracking-wide text-slate-500">
-                              {job.status}
-                            </span>
-                          </div>
-                          {job.items_scraped != null && (
-                            <span className="text-[11px] text-slate-400">
-                              {job.items_scraped} items
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                          <span className="font-mono">
-                            {job.started_at ?? '—'}
-                          </span>
-                          <span className="font-mono text-slate-600">
-                            {job.job_id}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex flex-col gap-2 text-xs text-slate-400">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-indigo-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      checked={form.skip_dynamic_fields ?? false}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          skip_dynamic_fields: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>Skip dynamic fields</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!activeJob?.job_id || isTerminating}
+                    onClick={() => void handleTerminateJob()}
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                    {isTerminating ? 'Terminating…' : 'Terminate'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleRunJob()}
+                    disabled={isRunning}
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    {isRunning ? 'Launching…' : 'Run job'}
+                  </Button>
                 </div>
               </div>
+
+              {statusMessage && (
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-xs text-slate-300">
+                  {statusMessage}
+                </div>
+              )}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80">
-            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
+          {/* Latest Listings */}
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 overflow-hidden">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto whitespace-nowrap">
               <div>
                 <h2 className="text-sm font-semibold text-slate-50">
                   Latest Listings
@@ -587,9 +528,6 @@ function App() {
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="hidden sm:inline">
-                  {/* Search UI removed from here */}
-                </span>
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-900/80 px-2 py-0.5 font-mono text-[10px] text-slate-400">
                   {isLoadingListings
                     ? 'Loading…'
@@ -597,76 +535,57 @@ function App() {
                 </span>
               </div>
             </div>
-            <div className="px-3 pb-4 pt-2 overflow-x-auto">
-              <table className="min-w-full border-separate border-spacing-y-1 text-xs">
+            <div className="px-0 pb-4 pt-2 overflow-x-auto custom-scroll">
+              <table className="min-w-full border-separate border-spacing-y-1 text-xs px-3">
                 <thead className="text-[11px] uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="text-left px-3 py-1.5 font-medium">Title</th>
-                    <th className="text-left px-3 py-1.5 font-medium">
-                      Price
-                    </th>
-                    <th className="text-left px-3 py-1.5 font-medium">
-                      Location
-                    </th>
-                    <th className="hidden md:table-cell text-left px-3 py-1.5 font-medium">
-                      Beds / Baths
-                    </th>
-                    <th className="hidden lg:table-cell text-left px-3 py-1.5 font-medium">
-                      Type
-                    </th>
-                    <th className="text-left px-3 py-1.5 font-medium">Source</th>
+                    <th className="text-left px-3 py-1.5 font-medium">Listing</th>
+                    <th className="text-left px-3 py-1.5 font-medium">Price</th>
+                    <th className="hidden lg:table-cell text-left px-3 py-1.5 font-medium">Location</th>
+                    <th className="hidden xl:table-cell text-left px-3 py-1.5 font-medium">Beds/Baths</th>
+                    <th className="text-right px-3 py-1.5 font-medium">Link</th>
                   </tr>
                 </thead>
                 <tbody>
                   {listings.length === 0 && !isLoadingListings && (
                     <tr>
-                      <td
-                        colSpan={6}
-                        className="px-3 py-4 text-center text-xs text-slate-500"
-                      >
-                        No listings available yet. Once a job completes, its
-                        freshest rows will appear here.
+                      <td colSpan={5} className="px-3 py-8 text-center text-xs text-slate-500">
+                        No listings found for this job.
                       </td>
                     </tr>
                   )}
                   {listings.map((listing) => (
                     <tr key={`${listing.id}-${listing.listing_url ?? ''}`}>
                       <td className="align-top">
-                        <div className="rounded-xl bg-slate-950/80 border border-slate-800/80 px-3 py-2 shadow-sm shadow-slate-950/60">
-                          <div className="text-xs font-medium text-slate-50 line-clamp-2">
+                        <div className="rounded-xl bg-slate-950/80 border border-slate-800/80 px-3 py-2 shadow-sm">
+                          <div className="text-xs font-medium text-slate-50 line-clamp-1">
                             {listing.title || 'Untitled listing'}
                           </div>
-                          <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                            <span className="line-clamp-1">
-                              {listing.location || '—'}
-                            </span>
-                            {listing.listing_url && (
-                              <a
-                                href={listing.listing_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-indigo-300 hover:text-indigo-200"
-                              >
-                                View
-                              </a>
-                            )}
+                          <div className="mt-0.5 text-[10px] text-slate-500 line-clamp-1">
+                            {listing.source_site} · {listing.property_type || 'Property'}
                           </div>
                         </div>
                       </td>
-                      <td className="align-top px-3 py-1.5 text-[11px] text-slate-200 whitespace-nowrap">
+                      <td className="align-top px-3 py-3 text-[11px] text-indigo-400 font-semibold whitespace-nowrap">
                         {listing.price || '—'}
                       </td>
-                      <td className="align-top px-3 py-1.5 text-[11px] text-slate-300 whitespace-nowrap">
+                      <td className="align-top px-3 py-3 text-[11px] text-slate-400 hidden lg:table-cell whitespace-nowrap">
                         {listing.location || '—'}
                       </td>
-                      <td className="align-top px-3 py-1.5 text-[11px] text-slate-300 hidden md:table-cell whitespace-nowrap">
-                        {listing.bedrooms ?? '—'} / {listing.bathrooms ?? '—'}
+                      <td className="align-top px-3 py-3 text-[11px] text-slate-500 hidden xl:table-cell whitespace-nowrap">
+                        {listing.bedrooms ?? '—'} b / {listing.bathrooms ?? '—'} ba
                       </td>
-                      <td className="align-top px-3 py-1.5 text-[11px] text-slate-400 hidden lg:table-cell whitespace-nowrap">
-                        {listing.property_type || '—'}
-                      </td>
-                      <td className="align-top px-3 py-1.5 text-[11px] text-slate-400 whitespace-nowrap">
-                        {listing.source_site || form.site}
+                      <td className="align-top px-3 py-3 text-right">
+                        {listing.listing_url && (
+                          <a
+                            href={listing.listing_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-indigo-400 hover:border-indigo-500/50 transition-colors"
+                          >
+                            <Play className="h-3 w-3 rotate-0" />
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -675,77 +594,124 @@ function App() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80">
+          {/* Recent Jobs */}
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/80 overflow-hidden">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Recent Jobs
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Snapshot of your latest scraper runs.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  void reloadJobs();
+                  void reloadListings(selectedJobId);
+                }}
+                aria-label="Refresh jobs"
+              >
+                <Radar className="h-4 w-4 text-indigo-300" />
+              </Button>
+            </div>
+            <div className="px-4 pb-4 pt-2">
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scroll">
+                {isLoadingJobs && (
+                  <div className="text-xs text-slate-500 py-2">Loading jobs…</div>
+                )}
+                {!isLoadingJobs && jobs.length === 0 && (
+                  <div className="text-xs text-slate-500 py-2">No jobs recorded yet.</div>
+                )}
+                {jobs.map((job) => (
+                  <button
+                    key={job.job_id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedJobId(job.job_id);
+                      void reloadListings(job.job_id);
+                    }}
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                      job.job_id === activeJob?.job_id
+                        ? 'border-indigo-500/70 bg-slate-900/90 shadow-sm shadow-indigo-500/20'
+                        : 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-xs font-semibold text-slate-100">{job.site}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500">{job.status}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 font-mono">
+                      <span>{job.started_at?.split(' ')[1] || '—'}</span>
+                      <span>{job.items_scraped ?? 0} items</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Live Console */}
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-800/80">
               <div className="flex items-center justify-between gap-2 mb-1">
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Live Console
-                </h2>
-                <div className="flex items-center gap-3">
+                <h2 className="text-sm font-semibold text-slate-50">Live Console</h2>
+                <div className="flex items-center gap-2">
                   <div className="relative group">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500 group-focus-within:text-indigo-400" />
                     <input
                       type="text"
-                      placeholder="Search logs..."
+                      placeholder="Search..."
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         setActiveMatchIndex(0);
                       }}
                       onKeyDown={handleSearchKeyDown}
-                      className="w-48 rounded-md border border-slate-800 bg-slate-900/50 py-1 pl-8 pr-2 text-[11px] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                      className="w-32 md:w-48 rounded-md border border-slate-800 bg-slate-900/50 py-1 pl-8 pr-2 text-[11px] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all"
                     />
-                    {searchQuery && (
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 font-mono pointer-events-none">
-                        {searchMatches.length > 0
-                          ? `${activeMatchIndex + 1}/${searchMatches.length}`
-                          : "0/0"}
-                      </div>
-                    )}
                   </div>
                   <button
                     onClick={() => void reloadLogs()}
-                    className="flex items-center gap-1.5 rounded-md border border-slate-800 bg-slate-900/50 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-all border-dashed"
+                    className="p-1 rounded-md border border-slate-800 bg-slate-900/50 text-slate-400 hover:text-slate-100 transition-all transition-colors"
                   >
-                    <RefreshCw
-                      className={`h-3 w-3 ${isLoadingLogs ? "animate-spin" : ""}`}
-                    />
-                    Refresh
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoadingLogs ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-slate-400">
-                  Streaming tail of the active job log (polling).
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[10px] text-slate-500 truncate">
+                  Tailing {activeJob?.job_id || 'none'}
                 </p>
-                <div className="text-[11px] text-slate-500 font-mono">
-                  {isLoadingLogs ? 'Loading…' : activeJob?.job_id ?? '—'}
-                </div>
+                {searchQuery && (
+                  <span className="text-[10px] text-indigo-400 font-mono">
+                    {searchMatches.length > 0 ? `${activeMatchIndex + 1}/${searchMatches.length}` : '0/0'}
+                  </span>
+                )}
               </div>
             </div>
             <div className="px-4 py-3">
               <div
                 ref={logContainerRef}
-                className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 max-h-[280px] overflow-y-auto"
+                className="rounded-xl border border-slate-800/80 bg-black/40 px-3 py-2 font-mono text-[11px] leading-relaxed text-slate-200 h-[320px] overflow-y-auto custom-scroll"
               >
                 {logLines.length === 0 ? (
-                  <div className="text-slate-500">
-                    No logs yet. Start a job to stream output here.
-                  </div>
+                  <div className="text-slate-600">No output yet.</div>
                 ) : (
-                  <>
-                    {logLines.map((l, idx) => (
-                      <AnsiLogLine
-                        key={`${idx}-${l.slice(0, 12)}`}
-                        line={l}
-                        id={`log-line-${idx}`}
-                        searchQuery={searchQuery}
-                        isActiveLine={searchMatches[activeMatchIndex]?.lineIndex === idx}
-                      />
-                    ))}
-                    <div ref={logBottomRef} />
-                  </>
+                  logLines.map((l, idx) => (
+                    <AnsiLogLine
+                      key={`${idx}-${l.slice(0, 10)}`}
+                      line={l}
+                      id={`log-line-${idx}`}
+                      searchQuery={searchQuery}
+                      isActiveLine={searchMatches[activeMatchIndex]?.lineIndex === idx}
+                    />
+                  ))
                 )}
+                <div ref={logBottomRef} />
               </div>
             </div>
           </section>
