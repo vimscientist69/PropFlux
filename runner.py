@@ -64,7 +64,8 @@ def setup_logging(site_name: str = "general", verbose: bool = False, job_id: Opt
         rotation="100 MB",
         retention="7 days",
         level=log_level,
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function} - {message}",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+        colorize=True,
     )
 
     return str(log_file)

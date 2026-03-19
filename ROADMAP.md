@@ -26,9 +26,9 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 
 ## Phase 3: Real-Time Monitoring & Telemetry
 *Focus: Live feedback during active scrapes.*
-- [ ] **WebSockets/Polling Implementation:** Stream status updates from backend to frontend.
-- [ ] **Live Console:** Stream Scrapy logs to a terminal component in the UI.
-- [ ] **Progress Monitoring:** Visual indicators for items scraped vs. limits.
+- [x] **WebSockets/Polling Implementation:** Stream status updates from backend to frontend.
+- [x] **Live Console:** Stream Scrapy logs to a terminal component in the UI.
+- [x] **Progress Monitoring:** Visual indicators for items scraped vs. limits.
 
 ## Phase 4: Data Visualization & Analytics
 *Focus: Turning scraped data into actionable insights.*

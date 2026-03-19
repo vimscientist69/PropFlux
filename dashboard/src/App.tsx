@@ -647,9 +647,7 @@ function App() {
                 ) : (
                   <>
                     {logLines.map((l, idx) => (
-                      <div key={`${idx}-${l.slice(0, 12)}`} className="whitespace-pre-wrap">
-                        {l}
-                      </div>
+                      <AnsiLogLine key={`${idx}-${l.slice(0, 12)}`} line={l} />
                     ))}
                     <div ref={logBottomRef} />
                   </>
@@ -716,6 +714,56 @@ function ProgressStrip({
       <div className="mt-2 text-[11px] text-slate-400">{label}</div>
     </div>
   );
+}
+
+const ANSI_REGEX = /\x1b\[(\d+(?:;\d+)*)m/;
+
+function AnsiLogLine({ line }: { line: string }) {
+  const parts = line.split(ANSI_REGEX);
+  const elements: React.ReactNode[] = [];
+  let currentStyles: React.CSSProperties = {};
+
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      if (parts[i]) {
+        elements.push(
+          <span key={i} style={{ ...currentStyles }}>
+            {parts[i]}
+          </span>
+        );
+      }
+    } else {
+      const codes = parts[i].split(';');
+      codes.forEach((code) => {
+        const c = parseInt(code);
+        if (c === 0) currentStyles = {};
+        else if (c === 1) currentStyles.fontWeight = 'bold';
+        else if (c === 31) currentStyles.color = '#f87171'; // red-400
+        else if (c === 32) currentStyles.color = '#4ade80'; // green-400
+        else if (c === 33) currentStyles.color = '#fbbf24'; // amber-400
+        else if (c === 34) currentStyles.color = '#60a5fa'; // blue-400
+        else if (c === 35) currentStyles.color = '#c084fc'; // purple-400
+        else if (c === 36) currentStyles.color = '#22d3ee'; // cyan-400
+        else if (c === 37) currentStyles.color = '#f8fafc'; // slate-50
+        else if (c >= 90 && c <= 97) {
+          // Bright colors
+          const brightColors: Record<number, string> = {
+            90: '#94a3b8', // slate-400
+            91: '#fca5a5', // red-300
+            92: '#86efac', // green-300
+            93: '#fcd34d', // amber-300
+            94: '#93c5fd', // blue-300
+            95: '#d8b4fe', // purple-300
+            96: '#67e8f9', // cyan-300
+            97: '#ffffff', // white
+          };
+          currentStyles.color = brightColors[c];
+        }
+      });
+    }
+  }
+
+  return <div className="whitespace-pre-wrap">{elements}</div>;
 }
 
 interface SliderFieldProps {
