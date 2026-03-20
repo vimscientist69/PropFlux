@@ -704,13 +704,32 @@ function App() {
                         : 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/80'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-xs font-semibold text-slate-100">{job.site}</span>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500">{job.status}</span>
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-100">
+                          {job.site}
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-900/60 px-2 py-0.5 text-[10px] font-mono text-slate-300 max-w-[140px] truncate">
+                          {job.job_id}
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-950/40 px-2 py-0.5 text-[10px] font-mono text-slate-400 max-w-[180px] truncate">
+                          {job.ended_at
+                            ? `Ended ${job.ended_at.replace('T', ' ').split('.')[0]}`
+                            : job.started_at
+                              ? `Started ${job.started_at.replace('T', ' ').split('.')[0]}`
+                              : '—'}
+                        </span>
+                      </div>
+
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {job.status}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500 font-mono">
-                      <span>{job.started_at?.split(' ')[1] || '—'}</span>
-                      <span>{job.items_scraped ?? 0} items</span>
+
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {job.items_scraped ?? 0} items
                     </div>
                   </button>
                 ))}
