@@ -40,6 +40,6 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 
 ## Phase 5: Infrastructure & Fine-Tuning
 *Focus: History, Exports, and Production Readiness.*
-- [ ] **Job History:** View and filter past runs.
-- [ ] **Export Management:** Download JSON/CSV directly from the dashboard.
+- [x] **Job History:** View and filter past runs.
+- [x] **Export Management:** Download JSON/CSV directly from the dashboard.
 - [ ] **Performance Polishing:** Optimize API queries and frontend transitions.

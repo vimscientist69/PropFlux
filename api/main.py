@@ -10,6 +10,7 @@ import pandas as pd
 import multiprocessing
 from multiprocessing.process import BaseProcess
 import json
+from fastapi.responses import StreamingResponse, JSONResponse
 
 # Add project root to path so we can import runner and core
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -162,6 +163,126 @@ async def get_jobs_history():
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+@app.get("/jobs/query")
+async def query_jobs(
+    limit: int = 25,
+    offset: int = 0,
+    site: Optional[str] = None,
+    status: Optional[str] = None,
+    q: Optional[str] = None,
+):
+    """
+    Paginated/filterable scrape_jobs query (Phase 5: Job History).
+    """
+    if not DB_PATH.exists():
+        return {"total": 0, "items": []}
+
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+
+        conditions: List[str] = []
+        params: List[Any] = []
+
+        if site:
+            conditions.append("site = ?")
+            params.append(site)
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        if q:
+            like = f"%{q}%"
+            conditions.append("(job_id LIKE ? OR site LIKE ? OR status LIKE ?)")
+            params.extend([like, like, like])
+
+        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        total_row = conn.execute(
+            f"SELECT COUNT(*) FROM scrape_jobs{where_clause}",
+            params,
+        ).fetchone()
+        total_count = int(total_row[0]) if total_row and total_row[0] is not None else 0
+
+        df = pd.read_sql_query(
+            f"""
+            SELECT *
+            FROM scrape_jobs
+            {where_clause}
+            ORDER BY started_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            conn,
+            params=params + [limit, offset],
+        )
+
+        conn.close()
+
+        records = df.to_dict(orient="records")
+        items = [
+            {k: (None if pd.isna(v) else v) for k, v in record.items()}
+            for record in records
+        ]
+        return {"total": total_count, "items": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+@app.get("/jobs/{job_id}/export")
+async def export_job(job_id: str, format: str = "csv"):
+    """
+    Export all listings for a job as CSV or JSON (Phase 5: Export Management).
+    """
+    if not DB_PATH.exists():
+        return JSONResponse(status_code=404, content={"detail": "Database not found"})
+
+    fmt = (format or "csv").lower().strip()
+    if fmt not in {"csv", "json"}:
+        raise HTTPException(status_code=400, detail="format must be one of: csv, json")
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query(
+            "SELECT * FROM listings WHERE job_id = ? ORDER BY scraped_at DESC",
+            conn,
+            params=(job_id,),
+        )
+        conn.close()
+
+        if fmt == "json":
+            records = df.to_dict(orient="records")
+            items = [
+                {k: (None if pd.isna(v) else v) for k, v in record.items()}
+                for record in records
+            ]
+            # Pretty-print JSON for easier inspection in the dashboard downloads.
+            pretty = json.dumps(
+                {"job_id": job_id, "count": len(items), "items": items},
+                ensure_ascii=False,
+                indent=2,
+            )
+            return StreamingResponse(
+                iter([pretty]),
+                media_type="application/json",
+                headers={"Content-Disposition": f'attachment; filename="{job_id}.json"'},
+            )
+
+        # CSV
+        if df.empty:
+            csv_text = "title,price,location\n"
+        else:
+            csv_text = df.to_csv(index=False)
+
+        return StreamingResponse(
+            iter([csv_text]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{job_id}.csv"'},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export error: {e}")
 
 
 @app.get("/jobs/{job_id}/telemetry")

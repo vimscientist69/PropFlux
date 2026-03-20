@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Square, Database, Radar, Settings2, Search, RefreshCw, Menu, X } from 'lucide-react';
+import { Play, Square, Database, Radar, Settings2, Search, RefreshCw, Menu, X, History as HistoryIcon } from 'lucide-react';
 import './App.css';
 import type { JobRequest } from './types/job';
 import type { Listing } from './types/listing';
@@ -15,6 +15,7 @@ import type { JobSummary, JobTelemetry } from './lib/api';
 import { Button } from './components/ui/button';
 import AnalyticsDashboard from './components/phase4/AnalyticsDashboard';
 import DataExplorer from './components/phase4/DataExplorer';
+import JobHistory from './components/phase5/JobHistory';
 
 const SITES = [
   { label: 'Property24', value: 'property24' },
@@ -48,7 +49,7 @@ function App() {
   // Mobile navigation state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  type DashboardTab = "control" | "analytics" | "explorer" | "settings";
+  type DashboardTab = "control" | "analytics" | "explorer" | "history" | "settings";
   const [activeTab, setActiveTab] = useState<DashboardTab>("control");
 
   // Search state
@@ -373,6 +374,22 @@ function App() {
           >
             <Radar className="h-4 w-4" />
             Analytics
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("history");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+              activeTab === "history"
+                ? "bg-slate-800/90 text-slate-50 shadow-sm shadow-slate-900/40 border border-indigo-500/20"
+                : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors"
+            }`}
+          >
+            <HistoryIcon className="h-4 w-4" />
+            Job History
           </button>
 
           <button
@@ -806,6 +823,10 @@ function App() {
 
           {activeTab === "analytics" && (
             <AnalyticsDashboard selectedSite={form.site} activeJob={activeJob} />
+          )}
+
+          {activeTab === "history" && (
+            <JobHistory siteOptions={SITES} initialSite={form.site} />
           )}
 
           {activeTab === "explorer" && (
