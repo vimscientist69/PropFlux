@@ -290,20 +290,13 @@ export default function AnalyticsDashboard({
                       borderRadius: 10,
                       color: '#e2e8f0',
                     }}
-                    content={({ active, payload }) => {
-                      if (!active || !payload || payload.length === 0) return null;
-                      const entry = (payload[0] as any)?.payload as {
-                        property_type?: string;
-                        count?: number;
-                      };
-                      const label = entry?.property_type ?? 'Unknown';
-                      const count = entry?.count ?? 0;
-                      return (
-                        <div className="text-[11px]">
-                          <div className="font-medium text-slate-100">{label}</div>
-                          <div className="text-slate-300">{count} listings</div>
-                        </div>
-                      );
+                    labelFormatter={() => ''}
+                    formatter={(value: any, _name: any, props: any) => {
+                      const propertyType =
+                        props?.payload?.property_type ??
+                        props?.payload?.name ??
+                        'Unknown';
+                      return [`${propertyType}: ${value} listings`];
                     }}
                   />
                   <Pie
