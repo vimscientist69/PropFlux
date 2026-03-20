@@ -317,7 +317,7 @@ function App() {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 transition-all duration-300 transform px-6 py-5
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        overflow-y-auto md:flex hidden
+        overflow-y-auto md:flex
       `}>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -414,7 +414,7 @@ function App() {
             {import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'}
           </span>
         </div>
-      </aside>      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      </aside>      <main className="flex-1 flex flex-col min-w-0 overflow-hidden md:ml-64">
         <header className="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
