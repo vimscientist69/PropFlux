@@ -1,5 +1,7 @@
 # 🏠 PropFlux
 
+<img width="1920" height="1080" alt="propflux-dashboard" src="https://github.com/user-attachments/assets/0273cdc9-cdf9-4245-ae72-1684326a72d4" />
+
 PropFlux is a scalable real estate data extraction engine designed for resilient, multi-site scraping. Built with Scrapy, with Selenium + NopeCHA support for dynamic fields, and an admin dashboard that makes long-running jobs observable and controllable.
 
 ### Why clients pick this (quick pitch)
