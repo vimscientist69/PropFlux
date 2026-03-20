@@ -444,6 +444,7 @@ function App() {
         <div className="flex-1 max-w-6xl mx-auto w-full px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
           {activeTab === "control" && (
             <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Main Control Panel */}
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 shadow-[0_18px_60px_rgba(15,23,42,0.9)] overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
@@ -573,6 +574,87 @@ function App() {
             </div>
           </section>
 
+          {/* Recent Jobs */}
+          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/80 overflow-hidden">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-50">
+                  Recent Jobs
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Snapshot of your latest scraper runs.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  void reloadJobs();
+                  void reloadListings(selectedJobId);
+                }}
+                aria-label="Refresh jobs"
+              >
+                <Radar className="h-4 w-4 text-indigo-300" />
+              </Button>
+            </div>
+            <div className="px-4 pb-4 pt-2">
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scroll">
+                {isLoadingJobs && (
+                  <div className="text-xs text-slate-500 py-2">Loading jobs…</div>
+                )}
+                {!isLoadingJobs && jobs.length === 0 && (
+                  <div className="text-xs text-slate-500 py-2">No jobs recorded yet.</div>
+                )}
+                {jobs.map((job) => (
+                  <button
+                    key={job.job_id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedJobId(job.job_id);
+                      void reloadListings(job.job_id);
+                    }}
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                      job.job_id === activeJob?.job_id
+                        ? 'border-indigo-500/70 bg-slate-900/90 shadow-sm shadow-indigo-500/20'
+                        : 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-100">
+                          {job.site}
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-900/60 px-2 py-0.5 text-[10px] font-mono text-slate-300 max-w-[140px] truncate">
+                          {job.job_id}
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-950/40 px-2 py-0.5 text-[10px] font-mono text-slate-400 max-w-[180px] truncate">
+                          {job.ended_at
+                            ? `Ended ${job.ended_at.replace('T', ' ').split('.')[0]}`
+                            : job.started_at
+                              ? `Started ${job.started_at.replace('T', ' ').split('.')[0]}`
+                              : '—'}
+                        </span>
+                      </div>
+
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                        {job.status}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {job.items_scraped ?? 0} items
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          </div>
+
           {/* Latest Listings */}
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2 overflow-hidden">
@@ -655,85 +737,6 @@ function App() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </section>
-
-          {/* Recent Jobs */}
-          <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/80 overflow-hidden">
-            <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-50">
-                  Recent Jobs
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Snapshot of your latest scraper runs.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  void reloadJobs();
-                  void reloadListings(selectedJobId);
-                }}
-                aria-label="Refresh jobs"
-              >
-                <Radar className="h-4 w-4 text-indigo-300" />
-              </Button>
-            </div>
-            <div className="px-4 pb-4 pt-2">
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scroll">
-                {isLoadingJobs && (
-                  <div className="text-xs text-slate-500 py-2">Loading jobs…</div>
-                )}
-                {!isLoadingJobs && jobs.length === 0 && (
-                  <div className="text-xs text-slate-500 py-2">No jobs recorded yet.</div>
-                )}
-                {jobs.map((job) => (
-                  <button
-                    key={job.job_id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedJobId(job.job_id);
-                      void reloadListings(job.job_id);
-                    }}
-                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
-                      job.job_id === activeJob?.job_id
-                        ? 'border-indigo-500/70 bg-slate-900/90 shadow-sm shadow-indigo-500/20'
-                        : 'border-slate-800 bg-slate-950/60 hover:bg-slate-900/80'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-100">
-                          {job.site}
-                        </span>
-
-                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-900/60 px-2 py-0.5 text-[10px] font-mono text-slate-300 max-w-[140px] truncate">
-                          {job.job_id}
-                        </span>
-
-                        <span className="inline-flex items-center rounded-full border border-slate-800/80 bg-slate-950/40 px-2 py-0.5 text-[10px] font-mono text-slate-400 max-w-[180px] truncate">
-                          {job.ended_at
-                            ? `Ended ${job.ended_at.replace('T', ' ').split('.')[0]}`
-                            : job.started_at
-                              ? `Started ${job.started_at.replace('T', ' ').split('.')[0]}`
-                              : '—'}
-                        </span>
-                      </div>
-
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                        {job.status}
-                      </span>
-                    </div>
-
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      {job.items_scraped ?? 0} items
-                    </div>
-                  </button>
-                ))}
-              </div>
             </div>
           </section>
 
