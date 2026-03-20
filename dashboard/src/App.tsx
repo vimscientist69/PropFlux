@@ -38,6 +38,18 @@ function App() {
   const [useLimit, setUseLimit] = useState(false);
   const [useMaxPages, setUseMaxPages] = useState(false);
 
+  // Phase 5 / Engine Settings (applied via FastAPI → Scrapy settings overrides).
+  const [engineConcurrentPerDomain, setEngineConcurrentPerDomain] =
+    useState(4);
+  const [engineDownloadDelay, setEngineDownloadDelay] = useState(1);
+  const [engineHeadless, setEngineHeadless] = useState(true);
+  const [useEngineSettingsOverrides, setUseEngineSettingsOverrides] =
+    useState(false);
+  const [engineExportBatchSize, setEngineExportBatchSize] = useState(100);
+  const [engineMaxConcurrentBrowsers, setEngineMaxConcurrentBrowsers] =
+    useState(2);
+  const [engineRetryTimes, setEngineRetryTimes] = useState(3);
+
   const [telemetry, setTelemetry] = useState<JobTelemetry | null>(null);
   const [logLines, setLogLines] = useState<string[]>([]);
   const [isLoadingTelemetry, setIsLoadingTelemetry] = useState(false);
@@ -240,8 +252,19 @@ function App() {
         site: form.site,
         url: form.url || undefined,
         skip_dynamic_fields: form.skip_dynamic_fields ?? false,
-        settings_overrides: form.settings_overrides,
       };
+
+      if (useEngineSettingsOverrides) {
+        payload.settings_overrides = {
+          CONCURRENT_REQUESTS_PER_DOMAIN: engineConcurrentPerDomain,
+          DOWNLOAD_DELAY: engineDownloadDelay,
+          // runner.py maps this into config.settings.HEADLESS
+          HEADLESS: engineHeadless,
+          EXPORT_BATCH_SIZE: engineExportBatchSize,
+          MAX_CONCURRENT_BROWSERS: engineMaxConcurrentBrowsers,
+          RETRY_TIMES: engineRetryTimes,
+        };
+      }
 
       if (useLimit && form.limit) {
         payload.limit = form.limit;
@@ -461,7 +484,7 @@ function App() {
         <div className="flex-1 max-w-6xl mx-auto w-full px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
           {activeTab === "control" && (
             <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Main Control Panel */}
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 shadow-[0_18px_60px_rgba(15,23,42,0.9)] overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
@@ -557,6 +580,18 @@ function App() {
                       }
                     />
                     <span>Skip dynamic fields</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-indigo-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      checked={useEngineSettingsOverrides}
+                      onChange={(e) =>
+                        setUseEngineSettingsOverrides(e.target.checked)
+                      }
+                    />
+                    <span>Use engine settings</span>
                   </label>
                 </div>
 
@@ -834,13 +869,85 @@ function App() {
           )}
 
           {activeTab === "settings" && (
-            <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/60 p-6">
-              <div className="text-sm font-semibold text-slate-50 mb-2">
-                Engine Settings
+            <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/60 p-6 space-y-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-50 mb-1">
+                  Engine Settings
+                </div>
+                <div className="text-xs text-slate-400">
+                  These overrides apply only if "Use engine settings" is
+                  enabled in the Control Panel.
+                </div>
               </div>
-              <div className="text-xs text-slate-400">
-                Phase 3+ settings (concurrency, CAPTCHA toggles, proxy health)
-                will be wired into the scraper via API overrides.
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <SliderField
+                  label="Concurrency / domain"
+                  hint="Sets CONCURRENT_REQUESTS_PER_DOMAIN in Scrapy."
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={engineConcurrentPerDomain}
+                  onChange={(value) =>
+                    setEngineConcurrentPerDomain(value)
+                  }
+                  unit="reqs"
+                />
+                <SliderField
+                  label="Download delay (seconds)"
+                  hint="Sets DOWNLOAD_DELAY in Scrapy."
+                  min={0}
+                  max={5}
+                  step={0.1}
+                  value={engineDownloadDelay}
+                  onChange={(value) => setEngineDownloadDelay(value)}
+                  unit="sec"
+                />
+                <SliderField
+                  label="Export batch size"
+                  hint="Controls how often listings flush to disk."
+                  min={10}
+                  max={500}
+                  step={10}
+                  value={engineExportBatchSize}
+                  onChange={(value) => setEngineExportBatchSize(value)}
+                  unit="rows"
+                />
+                <SliderField
+                  label="Max concurrent browsers"
+                  hint="Controls parallel Selenium extractions."
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={engineMaxConcurrentBrowsers}
+                  onChange={(value) => setEngineMaxConcurrentBrowsers(value)}
+                  unit="browsers"
+                />
+                <SliderField
+                  label="Retry times"
+                  hint="Updates RETRY_TIMES for Scrapy and dynamic extraction."
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={engineRetryTimes}
+                  onChange={(value) => setEngineRetryTimes(value)}
+                  unit="retries"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-indigo-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                  checked={engineHeadless}
+                  onChange={(e) => setEngineHeadless(e.target.checked)}
+                />
+                <div className="leading-tight">
+                  <div className="text-slate-200 font-medium">Headless mode</div>
+                  <div className="text-slate-500">
+                    Updates config runtime for Selenium browser mode.
+                  </div>
+                </div>
               </div>
             </section>
           )}
@@ -1001,6 +1108,7 @@ interface SliderFieldProps {
   onChange: (value: number) => void;
   enabled?: boolean;
   onToggleEnabled?: (enabled: boolean) => void;
+  unit?: string;
 }
 
 function SliderField({
@@ -1013,6 +1121,7 @@ function SliderField({
   onChange,
   enabled = true,
   onToggleEnabled,
+  unit,
 }: SliderFieldProps) {
   return (
     <div className="space-y-1.5">
@@ -1030,8 +1139,10 @@ function SliderField({
         </label>
         <span className="text-[11px] text-slate-400">
           {enabled
-            ? `${value} ${label.toLowerCase().includes('pages') ? 'pages' : 'items'
-            }`
+            ? `${value} ${
+                unit ??
+                (label.toLowerCase().includes('pages') ? 'pages' : 'items')
+              }`
             : 'Off (use defaults)'}
         </span>
       </div>

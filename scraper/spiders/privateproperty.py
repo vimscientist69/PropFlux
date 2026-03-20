@@ -12,8 +12,6 @@ class PrivatePropertySpider(BaseRealEstateSpider):
     
     custom_settings = {
         'ROBOTSTXT_OBEY': True,
-        'DOWNLOAD_DELAY': 1,
-        'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
     }
 
     # Map of feature label text → item field name (boolean True if present)

@@ -246,8 +246,36 @@ def setup_chrome_profile() -> None:
 
 class BrowserService:
     """Retrieves dynamic data using a Selenium session."""
-    
-    _browser_semaphore = threading.Semaphore(settings.MAX_CONCURRENT_BROWSERS)
+
+    _browser_semaphore_lock = threading.Lock()
+    _browser_semaphore = None
+    _browser_semaphore_capacity = None
+
+    @classmethod
+    def _get_browser_semaphore(cls) -> threading.Semaphore:
+        """
+        Build (and rebuild) the semaphore based on the current runtime
+        value of settings.MAX_CONCURRENT_BROWSERS.
+
+        This allows FastAPI/Runner to apply engine setting overrides at
+        job start time.
+        """
+        capacity = getattr(settings, 'MAX_CONCURRENT_BROWSERS', 2) or 2
+        try:
+            capacity = int(capacity)
+        except (ValueError, TypeError):
+            capacity = 2
+
+        with cls._browser_semaphore_lock:
+            if (
+                cls._browser_semaphore is None
+                or cls._browser_semaphore_capacity != capacity
+            ):
+                cls._browser_semaphore_capacity = capacity
+                cls._browser_semaphore = threading.Semaphore(capacity)
+
+        # mypy: _browser_semaphore is set in the lock above.
+        return cls._browser_semaphore  # type: ignore[return-value]
 
     def get_dynamic_data(self, url: str, site_key: str, fields: List[str], **kwargs) -> Dict[str, Any]:
         """
@@ -292,7 +320,7 @@ class BrowserService:
         
         _wait_for_rate_limit(site_key)
 
-        with self._browser_semaphore:
+        with self._get_browser_semaphore():
             logger.info(f"Browser Service: Acquired slot for {url}")
             temp_dir = tempfile.mkdtemp(prefix="chrome_profile_")
             source_profile = CHROME_PROFILE_DIR

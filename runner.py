@@ -110,6 +110,18 @@ def run_spider(site_key: str,
     # Initialize exporter for job tracking
     from core.exporter import Exporter
     exporter = Exporter()
+
+    # Keys that are considered "engine overrides" (affect Scrapy/browser behaviour).
+    # We also use this list to avoid passing engine keys into the spider's config_overrides.
+    ENGINE_OVERRIDE_KEYS = {
+        'CONCURRENT_REQUESTS_PER_DOMAIN',
+        'DOWNLOAD_DELAY',
+        'HEADLESS',
+        'headless',
+        'EXPORT_BATCH_SIZE',
+        'MAX_CONCURRENT_BROWSERS',
+        'RETRY_TIMES',
+    }
     
     logger.info(f"Starting scraper for: {site_key}")
     if job_id:
@@ -133,18 +145,57 @@ def run_spider(site_key: str,
         
         # Apply settings overrides
         if settings_overrides:
+            # Allow headless override via our app settings, not Scrapy settings.
+            from config.settings import settings as app_settings
             for key, value in settings_overrides.items():
-                settings.set(key, value)
-                logger.info(f"Overriding setting {key} = {value}")
+                # Map engine keys into the right runtime layer.
+                if key in {'HEADLESS', 'headless'}:
+                    headless_val = value
+                    if isinstance(headless_val, str):
+                        app_settings.HEADLESS = headless_val.lower() == 'true'
+                    else:
+                        app_settings.HEADLESS = bool(headless_val)
+                    continue
+
+                if key == 'EXPORT_BATCH_SIZE':
+                    try:
+                        app_settings.EXPORT_BATCH_SIZE = int(value)
+                    except (ValueError, TypeError):
+                        pass
+                    continue
+
+                if key == 'MAX_CONCURRENT_BROWSERS':
+                    try:
+                        app_settings.MAX_CONCURRENT_BROWSERS = int(value)
+                    except (ValueError, TypeError):
+                        pass
+                    continue
+
+                if key == 'RETRY_TIMES':
+                    try:
+                        app_settings.RETRY_TIMES = int(value)
+                    except (ValueError, TypeError):
+                        pass
+                    # Also set Scrapy RETRY_TIMES below.
+
+                if key in {'CONCURRENT_REQUESTS_PER_DOMAIN', 'DOWNLOAD_DELAY', 'RETRY_TIMES'}:
+                    settings.set(key, value)
+                    logger.info(f"Overriding setting {key} = {value}")
         
         # Create crawler process
         process = CrawlerProcess(settings)
         
         # Prepare spider kwargs
+        spider_config_overrides = {}
+        if settings_overrides:
+            spider_config_overrides = {
+                k: v for k, v in settings_overrides.items() if k not in ENGINE_OVERRIDE_KEYS
+            }
         spider_kwargs = {
             'job_id': job_id,
             'skip_dynamic_fields': skip_dynamic_fields,
-            'config_overrides': settings_overrides # Pass overrides to spider as well
+            # Pass non-engine overrides to the spider (e.g. selector/config tweaks).
+            'config_overrides': spider_config_overrides
         }
         
         if url:

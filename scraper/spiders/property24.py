@@ -15,8 +15,6 @@ class Property24Spider(BaseRealEstateSpider):
     
     custom_settings = {
         'ROBOTSTXT_OBEY': True,
-        'DOWNLOAD_DELAY': 1,
-        'CONCURRENT_REQUESTS_PER_DOMAIN': 4,
     }
     
     async def parse(self, response):

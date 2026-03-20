@@ -42,4 +42,4 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 *Focus: History, Exports, and Production Readiness.*
 - [x] **Job History:** View and filter past runs.
 - [x] **Export Management:** Download JSON/CSV directly from the dashboard.
-- [ ] **Performance Polishing:** Optimize API queries and frontend transitions.
+- [x] **Performance Polishing:** Optimize API queries and frontend transitions.
