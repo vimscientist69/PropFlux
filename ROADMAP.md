@@ -32,11 +32,11 @@ This roadmap outlines the multi-phase implementation of the PropFlux Admin & Mon
 
 ## Phase 4: Data Visualization & Analytics
 *Focus: Turning scraped data into actionable insights.*
-- [ ] **Analytics Dashboard:**
+- [x] **Analytics Dashboard:**
   - Price distribution charts (Price vs. Suburb).
   - Property type breakdown (Pie charts).
   - Geographic heatmaps.
-- [ ] **Data Explorer:** A searchable, paginated grid of all scraped listings.
+- [x] **Data Explorer:** A searchable, paginated grid of all scraped listings.
 
 ## Phase 5: Infrastructure & Fine-Tuning
 *Focus: History, Exports, and Production Readiness.*

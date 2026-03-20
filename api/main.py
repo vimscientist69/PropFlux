@@ -330,6 +330,69 @@ async def get_listings(limit: int = 100, site: Optional[str] = None, job_id: Opt
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
+
+@app.get("/listings/query")
+async def query_listings(
+    limit: int = 50,
+    offset: int = 0,
+    site: Optional[str] = None,
+    job_id: Optional[str] = None,
+    q: Optional[str] = None,
+):
+    """
+    Paginated/searchable listings endpoint for the Phase 4 Data Explorer.
+    """
+    if not DB_PATH.exists():
+        return {"total": 0, "items": []}
+
+    # Basic guardrails
+    limit = max(1, min(limit, 500))
+    offset = max(0, offset)
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+
+        conditions = []
+        params: List[Any] = []
+
+        if site:
+            conditions.append("source_site = ?")
+            params.append(site)
+        if job_id:
+            conditions.append("job_id = ?")
+            params.append(job_id)
+        if q:
+            like = f"%{q}%"
+            # Keep it simple: text search over a handful of columns.
+            conditions.append("(title LIKE ? OR location LIKE ? OR property_type LIKE ?)")
+            params.extend([like, like, like])
+
+        where_clause = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+
+        total_query = "SELECT COUNT(*) FROM listings" + where_clause
+        total = conn.execute(total_query, params).fetchone()
+        total_count = int(total[0]) if total and total[0] is not None else 0
+
+        items_query = (
+            "SELECT * FROM listings"
+            + where_clause
+            + " ORDER BY scraped_at DESC LIMIT ? OFFSET ?"
+        )
+        items_params = params + [limit, offset]
+
+        df = pd.read_sql_query(items_query, conn, params=items_params)
+        conn.close()
+
+        records = df.to_dict(orient="records")
+        items = [
+            {k: (None if pd.isna(v) else v) for k, v in record.items()}
+            for record in records
+        ]
+
+        return {"total": total_count, "items": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

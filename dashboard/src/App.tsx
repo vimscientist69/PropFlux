@@ -13,6 +13,8 @@ import {
 } from './lib/api';
 import type { JobSummary, JobTelemetry } from './lib/api';
 import { Button } from './components/ui/button';
+import AnalyticsDashboard from './components/phase4/AnalyticsDashboard';
+import DataExplorer from './components/phase4/DataExplorer';
 
 const SITES = [
   { label: 'Property24', value: 'property24' },
@@ -122,6 +124,12 @@ function App() {
         setIsLoadingTelemetry(true);
         const t = await fetchJobTelemetry(jobId);
         setTelemetry(t);
+
+        // If the backend reports the job isn't alive anymore, stop polling further.
+        if (!t.runtime.is_alive && interval) {
+          window.clearInterval(interval);
+          interval = undefined;
+        }
 
         // Conditional auto-refresh: if items_scraped increased, reload listings
         const currentCount = (t.job?.items_scraped as number) || 0;
@@ -715,6 +723,18 @@ function App() {
               </div>
             </div>
           </section>
+
+          {/* Phase 4: Analytics */}
+          <AnalyticsDashboard
+            selectedSite={form.site}
+            activeJob={activeJob}
+          />
+
+          {/* Phase 4: Data Explorer */}
+          <DataExplorer
+            selectedSite={form.site}
+            activeJob={activeJob}
+          />
         </div>
       </main>
     </div>
