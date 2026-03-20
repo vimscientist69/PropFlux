@@ -1,6 +1,11 @@
 # 🏠 PropFlux
 
-PropFlux is a scalable real estate data extraction engine designed for resilient, multi-site scraping. Built with Scrapy and designed for easy extension to new sites.
+PropFlux is a scalable real estate data extraction engine designed for resilient, multi-site scraping. Built with Scrapy, with Selenium + NopeCHA support for dynamic fields, and an admin dashboard that makes long-running jobs observable and controllable.
+
+### Why clients pick this (quick pitch)
+- You get a repeatable scraping pipeline: run jobs, monitor progress, and export clean results.
+- Anti-bot resilience is built in: proxies, retry-aware crawling, and browser stealth/CAPTCHA solving.
+- The project is operator-friendly: live logs, telemetry, termination controls, and search/exploration of results.
 
 ## 🎯 Features
 
@@ -12,21 +17,10 @@ PropFlux is a scalable real estate data extraction engine designed for resilient
 - **Memory-Efficient**: Periodic flushing to disk for large-scale scraping.
 - **Stealth Infrastructure**: Full proxy rotation and anti-bot bypassing (NopeCHA integration).
 - **Dynamic Content Support**: Selenium-based extraction for JavaScript-heavy elements (agent details, phone numbers).
+- **Admin dashboard (monitoring + job control)**: React + FastAPI UI for telemetry, live logs, job termination, analytics, and data exploration.
 
-## 📊 Current Project Status (85% Complete)
-
-PropFlux is currently in advanced development, with the core engine and most complex features fully operational.
-
-### ✅ Completed & Production-Ready
-- **Advanced Anti-Bot Bypassing**: Integrated `selenium-stealth` and NopeCHA for seamless CAPTCHA solving and browser fingerprint masking.
-- **Memory-Optimized Pipeline**: Custom incremental saving system that flushes data to disk in batches, ensuring stability for 100k+ listings.
-- **Intelligent Normalization**: Automated parsing of complex pricing (e.g., "POA", "Negotiable", "Auction") and unit conversion (M/K suffixes).
-- **Studio Detection**: Automatically detects and flags studio apartments from descriptions and decimal bedroom counts (0.5 -> 0 Studio).
-- **Stealth Proxy Logic**: Support for sessionized residential proxies with sticky session management to prevent IP blocking.
-- **Streaming Export Engine**: Real-time export to JSONL with final conversion to standard JSON, CSV, and SQLite.
-
-### 🚀 Roadmap (Remaining 15%)
-- **Admin Dashboard**: Developing a React + FastAPI monitoring dashboard for real-time success tracking and job management.
+## 📊 Current State
+PropFlux is running as a complete scraping + data pipeline system with: incremental exports (CSV/JSON/SQLite), optional Selenium/NopeCHA dynamic extraction, and a FastAPI + React dashboard for monitoring, job lifecycle control, and analytics. Ongoing work focuses on adding new targets and improving dashboard coverage as more fields are standardized.
 
 ## 📋 Requirements
 
@@ -92,67 +86,98 @@ python runner.py --setup-chrome-profile
 ```
 
 Follow the on-screen instructions to install the extension and authenticate. After setup, all future runs will reuse this profile automatically.
+## Output (where results go)
+- CSV: `output/<spider>_<timestamp>.csv`
+- Finalized JSON: `output/<spider>_<timestamp>.json`
+- SQLite: `output/listings.db`
+- Job progress snapshots: `output/job_stats/<job_id>.json`
+- Logs: `logs/<site>_<job_id>.log`
 
-## 📁 Project Structure
+## Key listing fields
+- Required: `title`, `price`, `location`, `bedrooms`, `bathrooms`, `property_type`, `listing_url`, `description`
+- Metadata/flags: `source_site`, `job_id`, `scraped_at`, plus `is_studio`, `is_auction`, `is_private_seller` (when detectable)
+- Optional (depends on site selectors): `agent_name`, `agent_phone`, `agency_name`, `listing_id`, `date_posted`, `erf_size`, `floor_size`
 
+## Client-Facing Walkthrough (how this delivers results)
+PropFlux is the kind of scraper I build when the goal is not just “get data once”, but to create a repeatable pipeline you can operate: run jobs, monitor progress, stop bad runs, and export clean outputs for analysis or downstream systems.
+
+### How it works
+1. `runner.py` starts the scrape (Scrapy spider) and records a job in the SQLite-backed `scrape_jobs` table.
+2. Spiders parse listing pages and emit raw items.
+3. Pipelines normalize + deduplicate + export in batches (controlled by `EXPORT_BATCH_SIZE`).
+4. For dynamic fields, `BrowserService` performs Selenium extraction using a persistent Chrome profile and NopeCHA (under `MAX_CONCURRENT_BROWSERS`, with `RETRY_TIMES`).
+5. Scrapy updates lightweight progress snapshots in `output/job_stats/<job_id>.json`.
+6. `api/main.py` exposes telemetry, logs, listings search, and job exports.
+7. The dashboard provides an operator-friendly UI for starting/terminating jobs and exploring results.
+
+## How I would use this on your project
+If you’re hiring me for web scraping + data pipelines + browser automation, I typically apply this same structure:
+- Start with site discovery and selector mapping (Scrapy + dynamic selectors).
+- Implement or extend a spider and pipelines so your output schema is consistent and validated.
+- Add resilience controls: retries, throttling, proxy strategy, and (when needed) Selenium extraction under a browser concurrency limit.
+- Ship monitoring: job lifecycle, telemetry, and log tailing, so you can safely run long scrapes without guessing.
+- Provide exports in the formats you need (CSV/JSON/SQLite) and optionally wire them to your downstream system.
+
+## Dashboard Documentation (what to click + what to expect)
+The dashboard lives in `dashboard/` and talks to the FastAPI backend.
+
+### Start the backend
+```bash
+python -m uvicorn api.main:app --reload --port 8000
 ```
-multi-site-real-estate-scraper/
-├── scraper/
-│   ├── spiders/
-│   │   ├── base_spider.py      # Base spider with common logic
-│   │   ├── property24.py       # Property24 spider
-│   │   └── privateproperty.py  # Private Property spider
-│   ├── settings.py             # Scrapy settings
-│   └── pipelines.py            # Data processing pipelines
-├── core/
-│   ├── parser.py               # HTML parsing logic
-│   ├── normalizer.py           # Data normalization & Studio detection
-│   ├── deduplicator.py         # Duplicate removal
-│   ├── exporter.py             # Export to CSV/JSON/SQLite
-│   └── browser_service.py      # Selenium dynamic data extraction
-├── config/
-│   └── sites.yaml              # Site configurations & CSS selectors
-├── chrome-profiles/            # Persistent Chrome profile (gitignored)
-├── output/                     # Generated files (CSV, JSON, DB)
-├── logs/                       # Log files
-├── runner.py                   # Main entry point
-└── requirements.txt            # Python dependencies
+
+### Start the dashboard UI
+```bash
+cd dashboard
+npm install
+npm run dev
 ```
 
-## ⚙️ Configuration
+If your backend is not on `localhost:8000`, set:
+`VITE_API_BASE_URL=http://<host>:<port>`.
 
-Site-specific configurations are stored in `config/sites.yaml`. Each site has:
+### Main Control Panel
+- **Target site**: choose `property24` or `privateproperty`
+- **Start URL / Search query**: optional override (falls back to site defaults)
+- **Skip dynamic fields**: when enabled, the scraper avoids Selenium dynamic extraction (faster; less complete)
+- **Use engine settings** (default OFF): controls whether `settings_overrides` are sent to the API when starting a job.
+  - When OFF: the job runs using the current defaults in `scraper/settings.py` and `config/settings.py`
+  - When ON: engine sliders apply to the next job you run
+- **Run job**: starts a background scrape and selects the new job in the UI
+- **Terminate**: stops an active job and updates job status/termination timestamps in the database
+- **Live Console**: streams the latest log lines for the selected job
+- **Recent Jobs**: quick selector + job status snapshots (`job_id`, timestamps, item counts)
 
-- **Selectors**: Static CSS selectors for Scrapy
-- **Dynamic Selectors**: Fields requiring browser-based extraction
-- **Pagination**: URL templates and page limits
-- **Rate limiting**: RPM settings and delays
+### Engine Settings tab (applies only when the main toggle is ON)
+- Concurrency / domain (`CONCURRENT_REQUESTS_PER_DOMAIN`)
+- Download delay (`DOWNLOAD_DELAY`)
+- Headless mode (`HEADLESS`)
+- Export batch size (`EXPORT_BATCH_SIZE`)
+- Max concurrent browsers (`MAX_CONCURRENT_BROWSERS`)
+- Retry times (`RETRY_TIMES`)
 
-## 📊 Output
+### Analytics + Data Explorer
+- **Analytics**: charts for distribution and missing-field heatmaps (based on stored listings)
+- **Data Explorer**: searchable, paginated listing grid powered by `/listings/query`
 
-The scraper generates three output formats:
-- **CSV**: `output/property24_YYYYMMDD_HHMMSS.csv`
-- **JSON**: `output/property24_YYYYMMDD_HHMMSS.json` (Finalized array)
-- **SQLite**: `output/listings.db`
+### Job History
+- Filter + pagination over `/jobs/query`
+- Per-job exports (CSV or prettified JSON) via `/jobs/{job_id}/export`
 
-## 📝 Extracted Data
+## API endpoints (used by the dashboard)
+- `GET /` health check
+- `POST /jobs/run` start a job
+- `POST /jobs/{job_id}/terminate` stop a running job
+- `GET /jobs/{job_id}/telemetry` progress + runtime status
+- `GET /jobs/{job_id}/logs?tail=<N>` live log tail
+- `GET /listings/query?limit=&offset=&site=&job_id=&q=` search + paginate listings
+- `GET /jobs/{job_id}/export?format=csv|json` download results
 
-Each listing includes:
-
-**Required fields:**
-- `title`, `price`, `location`, `bedrooms`, `bathrooms`, `property_type`, `listing_url`, `description`
-
-**Flags & Metadata:**
-- `is_studio` - Boolean (Auto-detected)
-- `is_auction` - Boolean (Auto-detected)
-- `is_private_seller` - Boolean (Auto-detected)
-- `source_site` - Origin (e.g. `property24`)
-- `scraped_at` - Timestamp of extraction
-
-**Optional fields:**
-- `agent_name`, `agent_phone`, `agency_name`, `listing_id`, `date_posted`, `erf_size`, `floor_size`
-
+## Extending PropFlux to new websites
+To add a new target site:
+1. Add site configuration in `config/sites.yaml` (selectors, pagination strategy, dynamic selectors).
+2. Create a spider in `scraper/spiders/` that extends the base spider.
+3. Register the spider in `runner.py` (`SPIDER_MAP`).
 
 ---
-
-**Built with ❤️ for reliable, scalable web scraping**
+Built with ❤️ for reliable, scalable web scraping
