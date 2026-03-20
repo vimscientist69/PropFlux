@@ -217,7 +217,8 @@ export default function AnalyticsDashboard({
               >
                 <BarChart data={suburbStats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} />
-                  <XAxis dataKey="suburb" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} />
+                  {/* Suburb labels can be very long; rely on tooltip instead */}
+                  <XAxis dataKey="suburb" tick={false} />
                   <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
@@ -249,7 +250,8 @@ export default function AnalyticsDashboard({
               >
                 <BarChart data={suburbStats} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} />
-                  <XAxis dataKey="suburb" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} />
+                  {/* Suburb labels can be very long; rely on tooltip instead */}
+                  <XAxis dataKey="suburb" tick={false} />
                   <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
@@ -288,7 +290,21 @@ export default function AnalyticsDashboard({
                       borderRadius: 10,
                       color: '#e2e8f0',
                     }}
-                    formatter={(value: any) => [value.toString(), 'count']}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || payload.length === 0) return null;
+                      const entry = (payload[0] as any)?.payload as {
+                        property_type?: string;
+                        count?: number;
+                      };
+                      const label = entry?.property_type ?? 'Unknown';
+                      const count = entry?.count ?? 0;
+                      return (
+                        <div className="text-[11px]">
+                          <div className="font-medium text-slate-100">{label}</div>
+                          <div className="text-slate-300">{count} listings</div>
+                        </div>
+                      );
+                    }}
                   />
                   <Pie
                     data={propertyTypeStats}

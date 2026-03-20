@@ -48,6 +48,9 @@ function App() {
   // Mobile navigation state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  type DashboardTab = "control" | "analytics" | "explorer" | "settings";
+  const [activeTab, setActiveTab] = useState<DashboardTab>("control");
+
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -314,7 +317,7 @@ function App() {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 flex-col border-r border-slate-800/80 bg-gradient-to-b from-slate-950 to-slate-900/60 transition-all duration-300 transform px-6 py-5
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        md:relative md:flex hidden
+        overflow-y-auto md:flex hidden
       `}>
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -340,15 +343,66 @@ function App() {
           <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wide">
             Overview
           </div>
-          <button className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 bg-slate-800/70 text-slate-50 text-sm shadow-sm shadow-slate-900/40">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("control");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+              activeTab === "control"
+                ? "bg-slate-800/90 text-slate-50 shadow-sm shadow-slate-900/40 border border-indigo-500/20"
+                : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors"
+            }`}
+          >
             <Play className="h-4 w-4 text-indigo-300" />
             Control Panel
           </button>
-          <button className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors">
-            <Database className="h-4 w-4" />
-            Data & Listings
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("analytics");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+              activeTab === "analytics"
+                ? "bg-slate-800/90 text-slate-50 shadow-sm shadow-slate-900/40 border border-indigo-500/20"
+                : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors"
+            }`}
+          >
+            <Radar className="h-4 w-4" />
+            Analytics
           </button>
-          <button className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors">
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("explorer");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+              activeTab === "explorer"
+                ? "bg-slate-800/90 text-slate-50 shadow-sm shadow-slate-900/40 border border-indigo-500/20"
+                : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors"
+            }`}
+          >
+            <Database className="h-4 w-4" />
+            Data Explorer
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("settings");
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ${
+              activeTab === "settings"
+                ? "bg-slate-800/90 text-slate-50 shadow-sm shadow-slate-900/40 border border-indigo-500/20"
+                : "text-slate-400 hover:bg-slate-900/80 hover:text-slate-100 transition-colors"
+            }`}
+          >
             <Settings2 className="h-4 w-4" />
             Engine Settings
           </button>
@@ -388,6 +442,8 @@ function App() {
         </header>
 
         <div className="flex-1 max-w-6xl mx-auto w-full px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+          {activeTab === "control" && (
+            <>
           {/* Main Control Panel */}
           <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900/80 shadow-[0_18px_60px_rgba(15,23,42,0.9)] overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-slate-800/80 flex items-center justify-between gap-2">
@@ -723,18 +779,28 @@ function App() {
               </div>
             </div>
           </section>
+            </>
+          )}
 
-          {/* Phase 4: Analytics */}
-          <AnalyticsDashboard
-            selectedSite={form.site}
-            activeJob={activeJob}
-          />
+          {activeTab === "analytics" && (
+            <AnalyticsDashboard selectedSite={form.site} activeJob={activeJob} />
+          )}
 
-          {/* Phase 4: Data Explorer */}
-          <DataExplorer
-            selectedSite={form.site}
-            activeJob={activeJob}
-          />
+          {activeTab === "explorer" && (
+            <DataExplorer selectedSite={form.site} activeJob={activeJob} />
+          )}
+
+          {activeTab === "settings" && (
+            <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-950 to-slate-900/60 p-6">
+              <div className="text-sm font-semibold text-slate-50 mb-2">
+                Engine Settings
+              </div>
+              <div className="text-xs text-slate-400">
+                Phase 3+ settings (concurrency, CAPTCHA toggles, proxy health)
+                will be wired into the scraper via API overrides.
+              </div>
+            </section>
+          )}
         </div>
       </main>
     </div>
