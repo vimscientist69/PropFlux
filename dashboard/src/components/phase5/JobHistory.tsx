@@ -19,6 +19,7 @@ export default function JobHistory({
   const [site, setSite] = useState<string>('ALL');
   const [status, setStatus] = useState<string>('ALL');
   const [q, setQ] = useState<string>('');
+  const debouncedQ = useDebouncedValue(q, 400);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -40,7 +41,7 @@ export default function JobHistory({
           offset: (page - 1) * pageSize,
           site: site === 'ALL' ? undefined : site,
           status: status === 'ALL' ? undefined : status,
-          q: q || undefined,
+          q: debouncedQ || undefined,
         });
         if (cancelled) return;
         setJobs(res.items);
@@ -56,7 +57,7 @@ export default function JobHistory({
     return () => {
       cancelled = true;
     };
-  }, [site, status, q, page, pageSize]);
+  }, [site, status, debouncedQ, page, pageSize]);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -262,5 +263,18 @@ export default function JobHistory({
       </div>
     </section>
   );
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedValue(value), delayMs);
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [value, delayMs]);
+
+  return debouncedValue;
 }
 

@@ -184,9 +184,31 @@ async def query_jobs(
 
     try:
         conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Select only the columns needed by the dashboard.
+        # This avoids sending large payloads (e.g. config/log_path) and improves performance.
+        cursor.execute("PRAGMA table_info(scrape_jobs)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        wanted_cols = [
+            "job_id",
+            "site",
+            "status",
+            "started_at",
+            "ended_at",
+            "terminated_at",
+            "items_scraped",
+        ]
+        selected_cols = [c for c in wanted_cols if c in existing_cols]
+        if not selected_cols:
+            return {"total": 0, "items": []}
+
+        select_list = ", ".join(selected_cols)
+        where_clause = ""
+        params: List[Any] = []
 
         conditions: List[str] = []
-        params: List[Any] = []
 
         if site:
             conditions.append("site = ?")
@@ -201,31 +223,25 @@ async def query_jobs(
 
         where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
 
-        total_row = conn.execute(
+        total_row = cursor.execute(
             f"SELECT COUNT(*) FROM scrape_jobs{where_clause}",
             params,
         ).fetchone()
         total_count = int(total_row[0]) if total_row and total_row[0] is not None else 0
 
-        df = pd.read_sql_query(
+        rows = cursor.execute(
             f"""
-            SELECT *
+            SELECT {select_list}
             FROM scrape_jobs
             {where_clause}
             ORDER BY started_at DESC
             LIMIT ? OFFSET ?
             """,
-            conn,
-            params=params + [limit, offset],
-        )
+            params + [limit, offset],
+        ).fetchall()
 
+        items = [dict(r) for r in rows]
         conn.close()
-
-        records = df.to_dict(orient="records")
-        items = [
-            {k: (None if pd.isna(v) else v) for k, v in record.items()}
-            for record in records
-        ]
         return {"total": total_count, "items": items}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
