@@ -5,13 +5,13 @@ sites:
     start_urls:
       # Using Cape Town search results as default - change region code (432) as needed
       - "https://www.property24.com/for-sale/cape-town/western-cape/432"
-    
+
     selectors:
       # Listing page selectors - updated to actual site structure
       listing_container: ".p24_tileContainer"
       listing_links: "a::attr(href)"
       # next_page: ".pagination a.next::attr(href)"
-      
+
       # Detail page selectors
       title: ".p24_listingCard h1::text"
       price: ".p24_price::text"
@@ -34,37 +34,37 @@ sites:
       backup_power: ".p24_propertyOverviewRow:contains('Backup Power') .p24_info::text"
       security: ".p24_propertyOverviewRow:contains('Security') .p24_info::text"
       pets_allowed: ".p24_propertyOverviewRow:contains('Pets Allowed') .p24_info::text"
-      
+
       # Hidden selectors for phone retrieval API
       agent_profile_url: ".p24_agentPhoto a::attr(href)"
       contact_value: ".js_agentDetails::attr(data-value)"
-    
+
     dynamic_selectors:
       agent_phone:
         show_btn: "a.p24_contactEmailsLink"
         result: "span.p24_sidebarAgentContactNumber"
-    
+
     pagination:
       type: "pattern"
       url_template: "{base_url}/p{page}"
       total_pages_selector: ".pagination li:last-child a::attr(data-pagenumber)"
       max_pages: 30
-    
+
     rate_limit:
-      requests_per_minute: 35
+      requests_per_minute: 10
 
   privateproperty:
     name: "Private Property"
     base_url: "https://www.privateproperty.co.za"
     start_urls:
       - "https://www.privateproperty.co.za/for-sale/south-africa/1"
-    
+
     selectors:
       # Listing page selectors
       listing_container: ".featured-listing, .listing-result"
       listing_links: "a::attr(href)"
       next_page: ".pagination .next::attr(href)"
-      
+
       # Detail page selectors
       title: ".listing-details__title::text"
       price: ".listing-price-display__price::text"
@@ -83,19 +83,20 @@ sites:
       parking: ".property-features__list-item:contains('Open parking') .property-features__value::text"
       en_suite: ".property-features__list-item:contains('En-suite') .property-features__value::text"
       lounges: ".property-features__list-item:contains('Lounges') .property-features__value::text"
-    
+
     dynamic_selectors:
       agent_name: "img[alt^='Photo of']::attr(alt)"
       agency_name: "a[href*='/estate-agency']::attr(title)"
       agent_phone:
         show_btn: ".contact-form-container button"
         result: ".modal--medium a[href^='tel']"
-    
+
     pagination:
       type: "pattern"
       url_template: "{base_url}?page={page}"
       total_pages_selector: ".paging__btn--big-number::text"
       max_pages: 30
-    
+
     rate_limit:
       requests_per_minute: 25
+

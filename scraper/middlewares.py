@@ -1,6 +1,7 @@
 from scrapy import signals
 from scrapy.exceptions import IgnoreRequest
 from urllib.parse import urlparse
+import time
 from core.rate_limiter import rate_limiter
 from core.user_agents import get_random_ua
 from config.settings import settings
@@ -28,6 +29,13 @@ class UnifiedRateLimitMiddleware:
     """
 
     def process_request(self, request, spider):
+        manual_backoff_seconds = request.meta.pop('manual_backoff_seconds', None)
+        if manual_backoff_seconds:
+            logger.warning(
+                f"Middleware: Applying one-time pagination backoff of {manual_backoff_seconds}s for {request.url}"
+            )
+            time.sleep(float(manual_backoff_seconds))
+
         # Identify the domain (or site_key if available)
         # We prefer site_key from spider to match site-specific configs
         site_key = getattr(spider, 'site_key', None)

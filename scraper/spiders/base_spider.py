@@ -19,6 +19,8 @@ class BaseRealEstateSpider(scrapy.Spider):
     
     # Override in subclasses
     site_key = None
+    PAGE_RETRY_BACKOFF_STEP_SECONDS = 50
+    PAGE_RETRY_MAX_BACKOFF_SECONDS = 500
     
     def __init__(self, start_urls=None, max_pages=None, limit=None, skip_dynamic_fields=False, job_id=None, config_overrides=None, *args, **kwargs):
         """Initialize spider with configuration."""
@@ -129,7 +131,12 @@ class BaseRealEstateSpider(scrapy.Spider):
                 url=url,
                 callback=self.parse,
                 errback=self.handle_error,
-                meta={'search_base_url': raw_url}
+                meta={
+                    'search_base_url': raw_url,
+                    'is_search_page': True,
+                    'page_retry_attempt': 0,
+                    'page_retry_wait_seconds': 0,
+                }
             )
 
     def get_next_page_url(self, response: Response) -> Optional[str]:
@@ -229,7 +236,12 @@ class BaseRealEstateSpider(scrapy.Spider):
                     url=next_page,
                     callback=self.parse,
                     errback=self.handle_error,
-                    meta={'search_base_url': response.meta.get('search_base_url')}
+                    meta={
+                        'search_base_url': response.meta.get('search_base_url'),
+                        'is_search_page': True,
+                        'page_retry_attempt': 0,
+                        'page_retry_wait_seconds': 0,
+                    }
                 )
     
     async def parse_listing(self, response: Response) -> Generator:
@@ -268,6 +280,38 @@ class BaseRealEstateSpider(scrapy.Spider):
         """
         logger.error(f"Request failed: {failure.request.url}")
         logger.error(f"Error: {failure.value}")
+
+        failed_request = failure.request
+        if failed_request.meta.get('is_search_page'):
+            current_wait = int(failed_request.meta.get('page_retry_wait_seconds', 0) or 0)
+            next_wait = current_wait + self.PAGE_RETRY_BACKOFF_STEP_SECONDS
+            if next_wait > self.PAGE_RETRY_MAX_BACKOFF_SECONDS:
+                logger.warning(
+                    "Pagination retry exhausted for {}. Last wait reached {}s and still failed. "
+                    "Dropping page retry and continuing natural drain.",
+                    failed_request.url,
+                    current_wait,
+                )
+            else:
+                retry_attempt = int(failed_request.meta.get('page_retry_attempt', 0) or 0) + 1
+                logger.warning(
+                    "Retrying failed search page {} (attempt #{}) after {}s backoff.",
+                    failed_request.url,
+                    retry_attempt,
+                    next_wait,
+                )
+                retry_meta = dict(failed_request.meta)
+                retry_meta.update({
+                    'page_retry_attempt': retry_attempt,
+                    'page_retry_wait_seconds': next_wait,
+                    'manual_backoff_seconds': next_wait,
+                })
+                return failed_request.replace(
+                    callback=self.parse,
+                    errback=self.handle_error,
+                    meta=retry_meta,
+                    dont_filter=True,
+                )
         
         self.items_processed += 1
         self._write_job_stats()
