@@ -2,6 +2,7 @@
 Base spider class with common functionality.
 """
 import json
+import random
 import yaml
 from pathlib import Path
 from typing import Dict, Any, Generator, Optional
@@ -19,8 +20,6 @@ class BaseRealEstateSpider(scrapy.Spider):
     
     # Override in subclasses
     site_key = None
-    PAGE_RETRY_BACKOFF_STEP_SECONDS = 50
-    PAGE_RETRY_MAX_BACKOFF_SECONDS = 500
     
     def __init__(self, start_urls=None, max_pages=None, limit=None, skip_dynamic_fields=False, job_id=None, config_overrides=None, *args, **kwargs):
         """Initialize spider with configuration."""
@@ -67,8 +66,40 @@ class BaseRealEstateSpider(scrapy.Spider):
             self.dev_limit = settings.DEV_LIMIT
         
         self.skip_dynamic_fields = skip_dynamic_fields
+        self.page_retry_backoff_step_seconds = self._with_jitter(
+            settings.PAGINATION_RETRY_BACKOFF_STEP_SECONDS
+        )
+        self.page_retry_max_backoff_seconds = self._with_jitter(
+            settings.PAGINATION_RETRY_MAX_BACKOFF_SECONDS
+        )
+        # Ensure max window is never lower than one step.
+        if self.page_retry_max_backoff_seconds < self.page_retry_backoff_step_seconds:
+            self.page_retry_max_backoff_seconds = self.page_retry_backoff_step_seconds
 
         logger.info(f"Initialized {self.name} spider for {self.site_key} (Job: {self.job_id})")
+        logger.info(
+            "Pagination retry strategy: step={}s, max={}s, jitter={}%",
+            self.page_retry_backoff_step_seconds,
+            self.page_retry_max_backoff_seconds,
+            settings.PAGINATION_RETRY_JITTER_PERCENT,
+        )
+
+    def _with_jitter(self, base_value: int) -> int:
+        """
+        Apply +/- jitter percentage from env to a base retry value.
+        """
+        try:
+            jitter_percent = float(settings.PAGINATION_RETRY_JITTER_PERCENT)
+        except (ValueError, TypeError):
+            jitter_percent = 0.0
+
+        jitter_percent = max(0.0, jitter_percent)
+        if jitter_percent == 0:
+            return max(1, int(base_value))
+
+        spread = jitter_percent / 100.0
+        multiplier = random.uniform(1.0 - spread, 1.0 + spread)
+        return max(1, int(round(float(base_value) * multiplier)))
 
     def _write_job_stats(self, extra: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -284,8 +315,8 @@ class BaseRealEstateSpider(scrapy.Spider):
         failed_request = failure.request
         if failed_request.meta.get('is_search_page'):
             current_wait = int(failed_request.meta.get('page_retry_wait_seconds', 0) or 0)
-            next_wait = current_wait + self.PAGE_RETRY_BACKOFF_STEP_SECONDS
-            if next_wait > self.PAGE_RETRY_MAX_BACKOFF_SECONDS:
+            next_wait = current_wait + self.page_retry_backoff_step_seconds
+            if next_wait > self.page_retry_max_backoff_seconds:
                 logger.warning(
                     "Pagination retry exhausted for {}. Last wait reached {}s and still failed. "
                     "Dropping page retry and continuing natural drain.",
