@@ -313,14 +313,55 @@ class Normalizer:
             if currency_field in normalized:
                 normalized[currency_field] = Normalizer.normalize_price(normalized[currency_field])
 
-        # Normalize booleans/strings (presence-based features become True or None)
-        for bool_field in ['backup_power', 'security', 'pets_allowed',
-                           'alarm', 'electric_fencing', 'pool', 'laundry', 'study', 'garden']:
+        def normalize_yes_no_bool(value: Any) -> Optional[bool]:
+            """
+            Coerce values into strict boolean-or-null for feature flags.
+            Rules (string values only):
+              - "yes" (case-insensitive) -> True
+              - "no" (case-insensitive)  -> False
+              - any other string value   -> True
+            If value is falsy/empty or None -> None.
+            If value is already boolean -> keep it.
+            """
+            if value is None:
+                return None
+
+            if isinstance(value, bool):
+                return value
+
+            if isinstance(value, str):
+                cleaned = value.strip()
+                if cleaned == "":
+                    return None
+                lowered = cleaned.lower()
+                if lowered == "yes":
+                    return True
+                if lowered == "no":
+                    return False
+                return True
+
+            # Non-string types: treat any non-null truthy value as True.
+            return True if value else None
+
+        # Force strict boolean-or-null for these fields.
+        for bool_field in ["pets_allowed", "security", "backup_power"]:
+            if bool_field in normalized:
+                normalized[bool_field] = normalize_yes_no_bool(normalized.get(bool_field))
+
+        # Other presence-based feature flags: keep existing behavior.
+        for bool_field in [
+            "alarm",
+            "electric_fencing",
+            "pool",
+            "laundry",
+            "study",
+            "garden",
+        ]:
             val = normalized.get(bool_field)
             if isinstance(val, bool):
                 pass  # already a proper boolean, leave it
             elif val:
-                normalized[bool_field] = ' '.join(str(val).split())
+                normalized[bool_field] = " ".join(str(val).split())
 
         # Normalize property type
         if 'property_type' in normalized:
