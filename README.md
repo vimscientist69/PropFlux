@@ -24,6 +24,16 @@ PropFlux is a scalable real estate data extraction engine designed for resilient
 ## 📊 Current State
 PropFlux is running as a complete scraping + data pipeline system with: incremental exports (CSV/JSON/SQLite), optional Selenium/NopeCHA dynamic extraction, and a FastAPI + React dashboard for monitoring, job lifecycle control, and analytics. Ongoing work focuses on adding new targets and improving dashboard coverage as more fields are standardized.
 
+## Dashboard Screenshots
+
+<img width="1859" height="992" alt="propflux-2" src="https://github.com/user-attachments/assets/e61020b1-78e3-417d-9969-040b08882828" />
+
+<img width="1867" height="1007" alt="propflux-3" src="https://github.com/user-attachments/assets/e4cbdcf6-05ad-4980-a894-eac46bb7fe35" />
+
+<img width="1856" height="989" alt="propflux-4" src="https://github.com/user-attachments/assets/f1ab9e11-14ab-4f06-87e3-1223793bccf0" />
+
+<img width="1869" height="985" alt="propflux-5" src="https://github.com/user-attachments/assets/bb49e18d-2ed6-4e68-9c75-12207d1d348c" />
+
 ## 📋 Requirements
 
 - Python 3.11+
